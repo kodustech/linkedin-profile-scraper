@@ -11,6 +11,7 @@
   "author": "Gabriel Malinosqui",
   "license": "ISC",
   "dependencies": {
+    "body-parser": "^1.19.0",
     "clean-text-utils": "^1.1.17",
     "cors": "^2.8.5",
     "dom-parser": "^0.1.5",

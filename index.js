@@ -2,10 +2,16 @@ require('dotenv').config();
 const puppeteer = require('puppeteer');
 const express = require('express');
 const request = require('request');
-const cors = require('cors')
+const cors = require('cors');
+const bodyParser = require('body-parser');
 
 const app = express();
+
 app.use(cors());
+app.use(bodyParser.urlencoded({
+  extended: true
+}));
+app.use(bodyParser.json());
 
 const port = process.env.PORT || 3000;
 const {
@@ -72,7 +78,6 @@ console.log(`Server setup: Setting up...`);
 
   app.get('/pipefy', async (req, res) => {
     const nameToFind = req.query.name;
-    console.log(nameToFind);
     var options = {
       method: 'POST',
       url: 'https://api.pipefy.com/graphql',
@@ -84,10 +89,37 @@ console.log(`Server setup: Setting up...`);
         query: '{ cards(pipe_id: 1102385, first: 10, search: {title: "' + nameToFind + '" }) { edges { node { title } } } }'
       },
       json: true,
-      jar: 'JAR'
     };
 
-    console.log(options.body.query);
+    request(options, function (error, response, body) {
+      if (error) {
+        res.json({
+          ...error
+        });
+      }
+
+      res.json({
+        ...body
+      });
+    });
+  });
+
+  app.post('/pipefy/create', async (req, res) => {
+    const body = req.body;
+    console.log(req);
+    var options = {
+      method: 'POST',
+      url: 'https://api.pipefy.com/graphql',
+      headers: {
+        'content-type': 'application/json',
+        authorization: 'Bearer eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzUxMiJ9.eyJ1c2VyIjp7ImlkIjo5MTQ0OTgsImVtYWlsIjoianVuaW9yLnNhcnRvcmlAZXpkZXZzLmNvbS5iciIsImFwcGxpY2F0aW9uIjo1NTk1OH19.hff1owAlgW9vFjU1zWVL47B6FJhkxrPkrvj66hE99Y938vDppA6WvW2I2vIvLX6YdOgBu8y2fOI9K7_mBqZUAw'
+      },
+      body: {
+        query: 'mutation{ createCard(input: {pipe_id: 1102385 fields_attributes: [ {field_id: "nome", field_value: "' + body.name + '"} {field_id: "linkedin", field_value: "' + body.linkedin + '"}]}) { card {id title }}}'
+      },
+      json: true,
+    };
+
     request(options, function (error, response, body) {
       if (error) {
         res.json({
@@ -99,8 +131,6 @@ console.log(`Server setup: Setting up...`);
         ...body
       })
     });
-
-
   });
 
 
