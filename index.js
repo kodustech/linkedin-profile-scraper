@@ -91,9 +91,12 @@ console.log(`Server setup: Setting up...`);
         authorization: `Bearer ${process.env.PIPEFY_TOKEN}`
       },
       body: {
-        query: `{ cards(pipe_id: ${process.env.PIPEFY_PIPE_ID}, first: 10, search: {title: "' +
+        query:
+          "{ cards(pipe_id: " +
+          process.env.PIPEFY_PIPE_ID +
+          ', first: 10, search: {title: "' +
           nameToFind +
-          '" }) { edges { node { title } } } }`
+          '" }) { edges { node { title } } } }'
       },
       json: true
     };
@@ -113,7 +116,6 @@ console.log(`Server setup: Setting up...`);
 
   app.post("/pipefy/create", async (req, res) => {
     const body = req.body;
-
     console.log(req);
     var options = {
       method: "POST",
@@ -123,11 +125,14 @@ console.log(`Server setup: Setting up...`);
         authorization: `Bearer ${process.env.PIPEFY_TOKEN}`
       },
       body: {
-        query: `mutation{ createCard(input: {pipe_id: ${process.env.PIPEFY_PIPE_ID} fields_attributes: [ {field_id: "nome", field_value: "' +
+        query:
+          "mutation{ createCard(input: {pipe_id: " +
+          process.env.PIPEFY_PIPE_ID +
+          ' fields_attributes: [ {field_id: "nome", field_value: "' +
           body.name +
           '"} {field_id: "linkedin", field_value: "' +
           body.linkedin +
-          '"}]}) { card {id title }}}`
+          '"}]}) { card {id title }}}'
       },
       json: true
     };
