@@ -28,7 +28,9 @@ console.log(`Server setup: Setting up...`);
   try {
     // Setup the headless browser before the requests, so we can re-use the Puppeteer session on each request
     // Resulting in fast scrapes because we don't have to launch a headless browser anymore
-    const { page } = await setupScraper();
+    const {
+      page
+    } = await setupScraper();
 
     // An endpoint to determine if the scraper is still loggedin into LinkedIn
     app.get("/status", async (req, res) => {
@@ -42,14 +44,14 @@ console.log(`Server setup: Setting up...`);
       } else {
         res.json({
           status: "fail",
-          message:
-            "We are logged out of LinkedIn, or our logged in check is not working anymore."
+          message: "We are logged out of LinkedIn, or our logged in check is not working anymore."
         });
       }
     });
 
     app.get("/", async (req, res) => {
       const urlToScrape = req.query.url;
+      console.log(urlToScrape);
 
       if (urlToScrape && urlToScrape.includes("linkedin.com/")) {
         // TODO: this should be a worker process
@@ -64,8 +66,7 @@ console.log(`Server setup: Setting up...`);
         });
       } else {
         res.json({
-          message:
-            "Missing the url parameter. Or given URL is not an LinkedIn URL."
+          message: "Missing the url parameter. Or given URL is not an LinkedIn URL."
         });
       }
     });
@@ -91,8 +92,7 @@ console.log(`Server setup: Setting up...`);
         authorization: `Bearer ${process.env.PIPEFY_TOKEN}`
       },
       body: {
-        query:
-          "{ cards(pipe_id: " +
+        query: "{ cards(pipe_id: " +
           process.env.PIPEFY_PIPE_ID +
           ', first: 10, search: {title: "' +
           nameToFind +
@@ -101,7 +101,7 @@ console.log(`Server setup: Setting up...`);
       json: true
     };
 
-    request(options, function(error, response, body) {
+    request(options, function (error, response, body) {
       if (error) {
         res.json({
           ...error
@@ -125,8 +125,7 @@ console.log(`Server setup: Setting up...`);
         authorization: `Bearer ${process.env.PIPEFY_TOKEN}`
       },
       body: {
-        query:
-          "mutation{ createCard(input: {pipe_id: " +
+        query: "mutation{ createCard(input: {pipe_id: " +
           process.env.PIPEFY_PIPE_ID +
           ' fields_attributes: [ {field_id: "nome", field_value: "' +
           body.name +
@@ -137,7 +136,7 @@ console.log(`Server setup: Setting up...`);
       json: true
     };
 
-    request(options, function(error, response, body) {
+    request(options, function (error, response, body) {
       if (error) {
         res.json({
           ...error

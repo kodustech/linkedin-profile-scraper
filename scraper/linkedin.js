@@ -10,6 +10,12 @@ const path = require('path');
 
 global.appRoot = path.resolve(__dirname + '../../');
 
+function waitUntil(t) {
+  return new Promise((r) => {
+    setTimeout(r, t)
+  })
+}
+
 const setupScraper = async () => {
   try {
     const blockedResources = ['image', 'stylesheet', 'media', 'font', 'texttrack', 'object', 'beacon', 'csp_report', 'imageset'];
@@ -18,12 +24,13 @@ const setupScraper = async () => {
     statusLog(logSection, 'Launching puppeteer in the background...')
 
     // const ext = global.appRoot + '/ublock-chromium'
-    // const datadir = global.appRoot + '/ublock-data'
+    const datadir = global.appRoot + '/ublock-data'
 
     const browser = await puppeteer.launch({
-      headless: true,
-      // userDataDir: datadir,
+      headless: false,
+      userDataDir: datadir,
       args: [
+        '--headless',
         '--no-sandbox',
         '--disable-setuid-sandbox',
         "--proxy-server='direct://",
@@ -31,7 +38,9 @@ const setupScraper = async () => {
         // `--load-extension=${ext}`,
         '--disable-dev-shm-usage',
         '--disable-accelerated-2d-canvas',
-        '--disable-gpu'
+        '--disable-gl-drawing-for-tests',
+        '--mute-audio',
+        '--no-first-run',
       ]
       // '--no-sandbox', '--disable-setuid-sandbox' -> For the Heroku Buildpack: https://github.com/nguyenkaos/puppeteer-heroku-buildpack . More info: https://github.com/jontewks/puppeteer-heroku-buildpack/issues/24#issuecomment-421789066
       // "--proxy-server='direct://'", '--proxy-bypass-list=*' -> For speed improvements: https://github.com/GoogleChrome/puppeteer/issues/1718#issuecomment-424357709
@@ -44,15 +53,15 @@ const setupScraper = async () => {
     statusLog(logSection, `Blocking the following resources: ${blockedResources.join(', ')}`)
 
     // Block loading of resources, like images and css, we dont need that
-    await page.setRequestInterception(true);
+    // await page.setRequestInterception(true);
 
-    page.on('request', (req) => {
-      if (blockedResources.includes(req.resourceType())) {
-        req.abort()
-      } else {
-        req.continue()
-      }
-    })
+    // page.on('request', (req) => {
+    //   if (blockedResources.includes(req.resourceType())) {
+    //     req.abort()
+    //   } else {
+    //     req.continue()
+    //   }
+    // })
 
     // Speed improvement: https://github.com/GoogleChrome/puppeteer/issues/1718#issuecomment-425618798
     await page.setUserAgent('Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/69.0.3497.100 Safari/537.36')
@@ -74,9 +83,11 @@ const setupScraper = async () => {
 
     statusLog(logSection, 'Browsing to LinkedIn.com in the background using a headless browser...')
 
-    await page.goto('https://www.linkedin.com/', {
-      waitUntil: 'domcontentloaded'
+    await page.goto('https://www.linkedin.com/in/barackobama/', {
+      waitUntil: 'networkidle2'
     })
+
+    await waitUntil(1000)
 
     statusLog(logSection, 'Adding helper methods to page')
     await page.exposeFunction('getCleanText', getCleanText);
@@ -325,22 +336,22 @@ const getLinkedinProfileDetails = async (page, profileUrl) => {
 
   statusLog(logSection, `Parsing skills data...`, scraperSessionId)
 
-  const skills = await page.$$eval('.pv-skill-categories-section ol > .ember-view', nodes => {
-    // Note: the $$eval context is the browser context.
-    // So custom methods you define in this file are not available within this $$eval.
+  // const skills = await page.$$eval('.pv-skill-categories-section ol > .ember-view', nodes => {
+  //   // Note: the $$eval context is the browser context.
+  //   // So custom methods you define in this file are not available within this $$eval.
 
-    return nodes.map((node) => {
-      const skillName = node.querySelector('.pv-skill-category-entity__name-text');
-      const endorsementCount = node.querySelector('.pv-skill-category-entity__endorsement-count');
+  //   return nodes.map((node) => {
+  //     const skillName = node.querySelector('.pv-skill-category-entity__name-text');
+  //     const endorsementCount = node.querySelector('.pv-skill-category-entity__endorsement-count');
 
-      return {
-        skillName: (skillName) ? skillName.textContent.trim() : null,
-        endorsementCount: (endorsementCount) ? parseInt(endorsementCount.textContent.trim()) : 0
-      }
-    })
-  });
+  //     return {
+  //       skillName: (skillName) ? skillName.textContent.trim() : null,
+  //       endorsementCount: (endorsementCount) ? parseInt(endorsementCount.textContent.trim()) : 0
+  //     }
+  //   })
+  // });
 
-  statusLog(logSection, `Got skills data: ${JSON.stringify(skills)}`, scraperSessionId)
+  // statusLog(logSection, `Got skills data: ${JSON.stringify(skills)}`, scraperSessionId)
 
   statusLog(logSection, `Done! Returned profile details for: ${profileUrl}`, scraperSessionId)
 
@@ -348,7 +359,7 @@ const getLinkedinProfileDetails = async (page, profileUrl) => {
     userProfile,
     experiences,
     education,
-    skills
+    // skills
   }
 };
 
