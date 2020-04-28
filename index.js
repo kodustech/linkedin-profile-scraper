@@ -22,6 +22,11 @@ const {
   checkIfLoggedIn
 } = require("./scraper/linkedin");
 
+const {
+  setup,
+  getData,
+} = require("./scraper/methods");
+
 console.log(`Server setup: Setting up...`);
 
 (async () => {
@@ -30,7 +35,7 @@ console.log(`Server setup: Setting up...`);
     // Resulting in fast scrapes because we don't have to launch a headless browser anymore
     const {
       page
-    } = await setupScraper();
+    } = await setup();
 
     // An endpoint to determine if the scraper is still loggedin into LinkedIn
     app.get("/status", async (req, res) => {
@@ -57,7 +62,7 @@ console.log(`Server setup: Setting up...`);
         // TODO: this should be a worker process
         // We should send an event to the worker process and wait for an update
         // So this server can handle more concurrent connections
-        const linkedinProfileDetails = await getLinkedinProfileDetails(
+        const linkedinProfileDetails = await getData(
           page,
           urlToScrape
         );
