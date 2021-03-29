@@ -13,17 +13,17 @@ const { checkIfLoggedIn, getCookie } = require("./authentication");
 const setup = async () => {
   try {
     const browser = await puppeteer.launch({
-      headless: true,
+      headless: false,
       args: [
-        "--headless",
-        "--no-sandbox",
-        "--disable-setuid-sandbox",
-        "--proxy-server='direct://",
-        "--proxy-bypass-list=*",
-        "--disable-dev-shm-usage",
-        "--disable-accelerated-2d-canvas",
-        "--disable-gl-drawing-for-tests",
-        "--mute-audio",
+        // "--headless",
+        // "--no-sandbox",
+        // "--disable-setuid-sandbox",
+        // "--proxy-server='direct://",
+        // "--proxy-bypass-list=*",
+        // "--disable-dev-shm-usage",
+        // "--disable-accelerated-2d-canvas",
+        // "--disable-gl-drawing-for-tests",
+        // "--mute-audio",
       ],
     });
 
@@ -55,6 +55,16 @@ const setup = async () => {
 const getData = async (page, url) => {
   try {
     await page.goto(url);
+
+    await page.evaluate(async () => {
+      window.scrollTo({
+        top: 10000,
+        left: 10000,
+        behavior: "smooth",
+      });
+    });
+
+    await page.waitFor(1000);
 
     const expandButtonsSelectors = [
       ".pv-profile-section.pv-about-section .lt-line-clamp__more", // About
