@@ -13,17 +13,17 @@ const { checkIfLoggedIn, getCookie } = require("./authentication");
 const setup = async () => {
   try {
     const browser = await puppeteer.launch({
-      headless: false,
+      headless: true,
       args: [
-        // "--headless",
-        // "--no-sandbox",
-        // "--disable-setuid-sandbox",
-        // "--proxy-server='direct://",
-        // "--proxy-bypass-list=*",
-        // "--disable-dev-shm-usage",
-        // "--disable-accelerated-2d-canvas",
-        // "--disable-gl-drawing-for-tests",
-        // "--mute-audio",
+        "--headless",
+        "--no-sandbox",
+        "--disable-setuid-sandbox",
+        "--proxy-server='direct://",
+        "--proxy-bypass-list=*",
+        "--disable-dev-shm-usage",
+        "--disable-accelerated-2d-canvas",
+        "--disable-gl-drawing-for-tests",
+        "--mute-audio",
       ],
     });
 
