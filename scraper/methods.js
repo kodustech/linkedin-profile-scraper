@@ -34,12 +34,12 @@ const setup = async () => {
     await page.exposeFunction("formatDate", formatDate);
     await page.exposeFunction("getDurationInDays", getDurationInDays);
     await page.exposeFunction("getLocationFromText", getLocationFromText);
-
-    await checkIfLoggedIn(page);
+    
+    const cookie = await getCookie()
 
     await page.setCookie({
       name: "li_at",
-      value: await getCookie(),
+      value: cookie.trim(),
       domain: ".www.linkedin.com",
     });
 

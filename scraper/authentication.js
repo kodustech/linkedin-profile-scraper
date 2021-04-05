@@ -39,8 +39,8 @@ const checkIfLoggedIn = async (page) => {
       logSection,
       "Bad news. We are not logged in. Session is expired or our check to see if we are loggedin is not correct anymore."
     );
-    await login(page);
-    await checkIfLoggedIn(page);
+    /* await login(page);
+    await checkIfLoggedIn(page); */
   }
 
   return isLoggedIn;
