@@ -30,12 +30,9 @@ const setup = async () => {
     const page = await browser.newPage();
 
     console.log("Adding helper methods to page");
-    await page.exposeFunction("getCleanText", getCleanText);
-    await page.exposeFunction("formatDate", formatDate);
-    await page.exposeFunction("getDurationInDays", getDurationInDays);
-    await page.exposeFunction("getLocationFromText", getLocationFromText);
-    
-    const cookie = await getCookie()
+    await exposeFunctions(page);
+
+    const cookie = await getCookie();
 
     await page.setCookie({
       name: "li_at",
@@ -52,9 +49,19 @@ const setup = async () => {
   }
 };
 
-const getData = async (page, url) => {
+const exposeFunctions = async (page) => {
+  await page.exposeFunction("getCleanText", getCleanText);
+  await page.exposeFunction("formatDate", formatDate);
+  await page.exposeFunction("getDurationInDays", getDurationInDays);
+  await page.exposeFunction("getLocationFromText", getLocationFromText);
+};
+
+const getData = async (browser, url) => {
   try {
-    await page.goto(url);
+    const page = await browser.newPage();
+    await page.goto(url, { waitUntil: "load" });
+
+    await exposeFunctions(page);
 
     await page.evaluate(async () => {
       window.scrollTo({
@@ -64,7 +71,7 @@ const getData = async (page, url) => {
       });
     });
 
-    await page.waitFor(1000);
+    await page.waitForTimeout(1500);
 
     const expandButtonsSelectors = [
       ".pv-profile-section.pv-about-section .lt-line-clamp__more", // About
@@ -88,7 +95,7 @@ const getData = async (page, url) => {
     }
 
     // To give a little room to let data appear. Setting this to 0 might result in "Node is detached from document" errors
-    await page.waitFor(100);
+    await page.waitForTimeout(100);
 
     for (const seeMoreButtonSelector of seeMoreButtonsSelectors) {
       const buttons = await page.$$(seeMoreButtonSelector);
@@ -316,6 +323,7 @@ const getData = async (page, url) => {
         return data;
       }
     );
+    await page.close();
 
     return {
       userProfile,
@@ -323,6 +331,7 @@ const getData = async (page, url) => {
       education,
     };
   } catch (error) {
+    await page.close();
     throw new Error(error);
   }
 };

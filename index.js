@@ -26,7 +26,7 @@ console.log(`Server setup: Setting up...`);
   try {
     // Setup the headless browser before the requests, so we can re-use the Puppeteer session on each request
     // Resulting in fast scrapes because we don't have to launch a headless browser anymore
-    const { page } = await setup();
+    const { page, browser } = await setup();
 
     // An endpoint to determine if the scraper is still loggedin into LinkedIn
     app.get("/status", async (req, res) => {
@@ -48,21 +48,27 @@ console.log(`Server setup: Setting up...`);
 
     app.get("/", async (req, res) => {
       const urlToScrape = req.query.url;
-      if (urlToScrape && urlToScrape.includes("linkedin.com/")) {
-        await checkIfLoggedIn(page);
-        console.log(urlToScrape);
+      try {
+        if (urlToScrape && urlToScrape.includes("linkedin.com/")) {
+          await checkIfLoggedIn(page);
+          console.log(urlToScrape);
 
-        // TODO: this should be a worker process
-        // We should send an event to the worker process and wait for an update
-        // So this server can handle more concurrent connections
-        const linkedinProfileDetails = await getData(page, urlToScrape);
+          // TODO: this should be a worker process
+          // We should send an event to the worker process and wait for an update
+          // So this server can handle more concurrent connections
+          const linkedinProfileDetails = await getData(browser, urlToScrape);
+          res.json({
+            ...linkedinProfileDetails,
+          });
+        } else {
+          res.json({
+            message:
+              "Missing the url parameter. Or given URL is not an LinkedIn URL.",
+          });
+        }
+      } catch (error) {
         res.json({
-          ...linkedinProfileDetails,
-        });
-      } else {
-        res.json({
-          message:
-            "Missing the url parameter. Or given URL is not an LinkedIn URL.",
+          message: "Error on scrap " + urlToScrape,
         });
       }
     });

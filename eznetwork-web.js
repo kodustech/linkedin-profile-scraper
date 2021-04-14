@@ -58,7 +58,7 @@ const { getCookie } = require("./scraper/authentication");
   }
 
   // To give a little room to let data appear. Setting this to 0 might result in "Node is detached from document" errors
-  await page.waitFor(100);
+  await page.waitForTimeout(100);
 
   for (const seeMoreButtonSelector of seeMoreButtonsSelectors) {
     const buttons = await page.$$(seeMoreButtonSelector);
