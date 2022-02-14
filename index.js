@@ -58,7 +58,7 @@ console.log(`Server setup: Setting up...`);
       const urlToScrape = req.query.url;
       console.log(urlToScrape);
 
-      if (urlToScrape && urlToScrape.includes("linkedin.com/")) {
+      if (urlToScrape) {
         // TODO: this should be a worker process
         // We should send an event to the worker process and wait for an update
         // So this server can handle more concurrent connections
