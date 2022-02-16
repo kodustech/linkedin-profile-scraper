@@ -41,6 +41,9 @@ const setup = async () => {
       domain: ".www.linkedin.com",
     });
 
+    
+    await page.goto('https://www.linkedin.com');
+
     return {
       page,
       browser,
@@ -86,52 +89,33 @@ const getData = async (page, url) => {
       }
     }
 
-    //console.log('dois', buttonSelector);
-
-
-    // To give a little room to let data appear. Setting this to 0 might result in "Node is detached from document" errors
-
-    // for (const seeMoreButtonSelector of seeMoreButtonsSelectors) {
-    //   console.log(seeMoreButtonSelector, await page.$$(seeMoreButtonSelector))
-    //   const buttons = await page.$$(seeMoreButtonSelector);
-
-
-    //   for (const button of buttons) {
-
-    //     // if (button) {
-    //     //   await button.click();
-    //     // }
-    //   }
-    // }
-
-    // console.log('tres', seeMoreButtonSelector);
     page.on('console', (msg) => console.log('PAGE LOG:', msg.text()));
 
-    await page.evaluate(async () => {
+    /**
+     * Informações iniciais do usuário
+     */
+
+    const profileInformations = await page.evaluate(async () => {
       const profileSection = document.querySelector(".pv-top-card");
-
-      console.log(profileSection);
-
-      console.log('tres', profileSection);
 
       const url = window.location.href;
 
       const fullNameElement = profileSection.querySelector(
-        ".pv-top-card--list li:first-child"
+        ".pv-text-details__left-panel h1"
       );
       const fullName =
         fullNameElement && fullNameElement.textContent ?
           await window.getCleanText(fullNameElement.textContent) :
           null;
 
-      const titleElement = profileSection.querySelector("h2");
+      const titleElement = profileSection.querySelector(".ph5 .relative .pv-text-details__left-panel .text-body-medium");
       const title =
         titleElement && titleElement.textContent ?
           await window.getCleanText(titleElement.textContent) :
           null;
 
       const locationElement = profileSection.querySelector(
-        ".pv-top-card--list.pv-top-card--list-bullet.mt1 li:first-child"
+        ".ph5 .relative .pb2 .text-body-small"
       );
       const locationText =
         locationElement && locationElement.textContent ?
@@ -139,29 +123,23 @@ const getData = async (page, url) => {
           null;
       const location = await getLocationFromText(locationText);
 
+
       const photoElement =
-        profileSection.querySelector(".pv-top-card__photo") ||
-        profileSection.querySelector(".profile-photo-edit__preview");
+        profileSection.querySelector(".pv-top-card-profile-picture__image");
+
+
       const photo =
         photoElement && photoElement.getAttribute("src") ?
           photoElement.getAttribute("src") :
           null;
 
       const descriptionElement = document.querySelector(
-        ".pv-about__summary-text .lt-line-clamp__raw-line"
+        ".artdeco-card .pv-shared-text-with-see-more"
       ); // Is outside "profileSection"
       const description =
         descriptionElement && descriptionElement.textContent ?
           await window.getCleanText(descriptionElement.textContent) :
           null;
-
-
-      console.log(fullName,
-        title,
-        location,
-        photo,
-        description,
-        url)
 
       return {
         fullName,
@@ -172,67 +150,19 @@ const getData = async (page, url) => {
         url,
       };
     });
-    // const userProfile = await page.evaluate(async () => {
 
+    console.log('profileInformations', profileInformations);
 
-    console.log('tres', url);
-
-    // const profileSection = document.querySelector(".pv-top-card");
-
-    // console.log('tres', profileSection);
-
-    // const url = window.location.href;
-
-    // const fullNameElement = profileSection.querySelector(
-    //   ".pv-top-card--list li:first-child"
-    // );
-    // const fullName =
-    //   fullNameElement && fullNameElement.textContent ?
-    //     await window.getCleanText(fullNameElement.textContent) :
-    //     null;
-
-    // const titleElement = profileSection.querySelector("h2");
-    // const title =
-    //   titleElement && titleElement.textContent ?
-    //     await window.getCleanText(titleElement.textContent) :
-    //     null;
-
-    // const locationElement = profileSection.querySelector(
-    //   ".pv-top-card--list.pv-top-card--list-bullet.mt1 li:first-child"
-    // );
-    // const locationText =
-    //   locationElement && locationElement.textContent ?
-    //     await window.getCleanText(locationElement.textContent) :
-    //     null;
-    // const location = await getLocationFromText(locationText);
-
-    // const photoElement =
-    //   profileSection.querySelector(".pv-top-card__photo") ||
-    //   profileSection.querySelector(".profile-photo-edit__preview");
-    // const photo =
-    //   photoElement && photoElement.getAttribute("src") ?
-    //     photoElement.getAttribute("src") :
-    //     null;
-
-    // const descriptionElement = document.querySelector(
-    //   ".pv-about__summary-text .lt-line-clamp__raw-line"
-    // ); // Is outside "profileSection"
-    // const description =
-    //   descriptionElement && descriptionElement.textContent ?
-    //     await window.getCleanText(descriptionElement.textContent) :
-    //     null;
-
-    // return null
-
-    // return {
-    //   fullName,
-    //   title,
-    //   location,
-    //   photo,
-    //   description,
-    //   url,
-    // };
-    // });
+    const experiences = await page.$$eval(
+        "#ember67 .pvs-list__outer-container ul li",
+         async (nodes) => {
+          console.log(nodes)
+         let data = [];
+         for (const node of nodes) {
+           console.log("sadd")
+         }
+         }
+    )
 
     // const experiences = await page.$$eval(
     //   "#experience-section ul > .ember-view",
@@ -398,7 +328,7 @@ const getData = async (page, url) => {
     // );
 
     return {
-      // userProfile,
+      //userProfile,
       //experiences,
       //education,
     };
