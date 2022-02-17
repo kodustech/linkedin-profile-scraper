@@ -41,7 +41,7 @@ const setup = async () => {
       domain: ".www.linkedin.com",
     });
 
-    
+
     await page.goto('https://www.linkedin.com');
 
     return {
@@ -95,7 +95,7 @@ const getData = async (page, url) => {
      * Informações iniciais do usuário
      */
 
-    const profileInformations = await page.evaluate(async () => {
+    const userProfile = await page.evaluate(async () => {
       const profileSection = document.querySelector(".pv-top-card");
 
       const url = window.location.href;
@@ -151,17 +151,97 @@ const getData = async (page, url) => {
       };
     });
 
-    console.log('profileInformations', profileInformations);
+    const { allExperiences, allEducations } = await page.$$eval(
+      "main > section",
+      async (nodes) => {
+        let experienceArray = [];
+        let educationArray = [];
+        for (const node of nodes) {
+          const experiences = node.querySelector("#experience")
+          if (experiences) {
 
-    const experiences = await page.$$eval(
-        "#ember67 .pvs-list__outer-container ul li",
-         async (nodes) => {
-          console.log(nodes)
-         let data = [];
-         for (const node of nodes) {
-           console.log("sadd")
-         }
-         }
+            const jobs = await Array.from(node.querySelectorAll(".pvs-list__outer-container > .pvs-list > li"))
+
+            for (const job of jobs) {
+              const titleJob = job.querySelector(".pvs-list .pvs-entity div div div .t-bold span:nth-child(1)");
+              const title = titleJob && titleJob.textContent ?
+                await window.getCleanText(titleJob.textContent) :
+                null;
+
+              if (title) {
+                const arrayOtherDetails = Array.from(job.querySelectorAll(".pvs-list .pvs-entity div div .t-normal"));
+                const [companyContent, timeContent, locationContent, descriptionContent] = arrayOtherDetails;
+
+                const companySpan = companyContent?.querySelector(".t-normal span:first-child") || null;
+                const company = companySpan && companySpan.textContent ?
+                  await window.getCleanText(companySpan.textContent) :
+                  null;
+
+                const timeSpan = timeContent?.querySelector(".t-normal span:first-child") || null;
+                const time = timeSpan && timeSpan.textContent ?
+                  await window.getCleanText(timeSpan.textContent) :
+                  null;
+
+                const locationSpan = locationContent?.querySelector(".t-normal span:first-child") || null;
+                const location = locationSpan && locationSpan.textContent ?
+                  await window.getCleanText(locationSpan.textContent) :
+                  null;
+
+                const descriptionSpan = descriptionContent?.querySelector(".t-normal span:first-child") || null;
+                const description = descriptionSpan && descriptionSpan.textContent ?
+                  await window.getCleanText(descriptionSpan.textContent) :
+                  null;
+
+                let otherDetails = [company, time, location, description].filter(item => item)
+
+                experienceArray.push({ title, otherDetails });
+              }
+            }
+          }
+
+          const education = node.querySelector("#education")
+          if (education) {
+            const institutions = await Array.from(node.querySelectorAll(".pvs-list__outer-container > .pvs-list > li"));
+
+            for (const institution of institutions) {
+              const titleInstitution = institution.querySelector(".pvs-list .pvs-entity div div div .t-bold span:nth-child(1)");
+              const title = titleInstitution && titleInstitution.textContent ?
+                await window.getCleanText(titleInstitution.textContent) :
+                null;
+              if (title) {
+                const arrayOtherDetails = Array.from(institution.querySelectorAll(".pvs-list .pvs-entity div div .t-normal"));
+                const [courseContent, institutionContent, timeContent, descriptionContent] = arrayOtherDetails;
+
+                const courseSpan = courseContent?.querySelector(".t-normal span:first-child") || null;
+                const course = courseSpan && courseSpan.textContent ?
+                  await window.getCleanText(courseSpan.textContent) :
+                  null;
+
+                const institutionSpan = institutionContent?.querySelector(".t-normal span:first-child") || null;
+                const institutionName = institutionSpan && institutionSpan.textContent ?
+                  await window.getCleanText(institutionSpan.textContent) :
+                  null;
+
+                const timeSpan = timeContent?.querySelector(".t-normal span:first-child") || null;
+                const time = timeSpan && timeSpan.textContent ?
+                  await window.getCleanText(timeSpan.textContent) :
+                  null;
+
+                const descriptionSpan = descriptionContent?.querySelector(".t-normal span:first-child") || null;
+                const description = descriptionSpan && descriptionSpan.textContent ?
+                  await window.getCleanText(descriptionSpan.textContent) :
+                  null;
+
+                let otherDetails = [course, institutionName, time, description].filter(item => item)
+
+                educationArray.push({ title, otherDetails });
+              }
+            }
+          }
+        }
+
+        return { allExperiences: experienceArray, allEducations: educationArray };
+      }
     )
 
     // const experiences = await page.$$eval(
@@ -328,9 +408,9 @@ const getData = async (page, url) => {
     // );
 
     return {
-      //userProfile,
-      //experiences,
-      //education,
+      userProfile,
+      experiences: allExperiences,
+      education: allEducations,
     };
   } catch (error) {
     throw new Error(error);
