@@ -57,21 +57,12 @@ const getData = async (page, url) => {
   try {
     await page.goto(url);
 
-    const newExpandButtonsSelectors = [
-      ".pv-profile-section.pv-about-section .inline-show-more-text__button",
-    ];
-
     const expandButtonsSelectors = [
       ".pv-profile-section.pv-about-section .inline-show-more-text__button", // About
       "#experience-section .pv-profile-section__see-more-inline", // Experience
       ".pv-profile-section.education-section .pv-profile-section__see-more-inline", // Education
       ".pv-skill-categories-section .pv-profile-section__card-action-bar", // Skills
       ".pv-profile-section--certifications-section .pv-profile-section__see-more-inline", // certifications-section
-    ];
-
-    const seeMoreButtonsSelectors = [
-      '.pv-entity__description .lt-line-clamp__line.lt-line-clamp__line--last .lt-line-clamp__more[href="#"]',
-      '.lt-line-clamp__more[href="#"]:not(.lt-line-clamp__ellipsis--dummy)',
     ];
 
     console.log('Expanding all sections by clicking their "See more" buttons');
@@ -94,7 +85,6 @@ const getData = async (page, url) => {
     /**
      * Informações iniciais do usuário
      */
-
     const userProfile = await page.evaluate(async () => {
       const profileSection = document.querySelector(".pv-top-card");
 
@@ -154,8 +144,22 @@ const getData = async (page, url) => {
     const { allExperiences, allEducations, urlExperiences, urlEducations } = await page.$$eval(
       "main > section",
       async (nodes) => {
+
+        const flowExperience = {
+          openPageForMoreItems: ".pvs-list__outer-container .pvs-list__footer-wrapper a",
+          // getInternalListCards: ".pvs-list__outer-container > .pvs-list > .pvs-list__container",
+          getListCards: ".pvs-list__outer-container > .pvs-list > li",
+          items:{
+            title: ".pvs-list .pvs-entity div div div .t-bold span:nth-child(1)",
+            listDetails: ".pvs-list .pvs-entity div div .t-normal",
+            itemDetail: ".t-normal span:first-child"
+          }
+        }
+
         let experienceArray = [];
         let educationArray = [];
+
+
         /**
         * Candidato com muitas experiências
         */
@@ -166,41 +170,47 @@ const getData = async (page, url) => {
         */
         let urlEducations = null;
         for (const node of nodes) {
+
           const experiences = node.querySelector("#experience")
+
           if (experiences) {
 
-            const allJobs = await node.querySelector('.pvs-list__outer-container .pvs-list__footer-wrapper a');
+            // const tt = await node.querySelector(flowExperience.getInternalListCards);
+
+            // console.log(tt, "++++");
+
+            const allJobs = await node.querySelector(flowExperience.openPageForMoreItems);
 
             if (!allJobs) {
 
-              const jobs = await Array.from(node.querySelectorAll(".pvs-list__outer-container > .pvs-list > li"))
+              const jobs = await Array.from(node.querySelectorAll(flowExperience.getListCards))
 
               for (const job of jobs) {
-                const titleJob = job.querySelector(".pvs-list .pvs-entity div div div .t-bold span:nth-child(1)");
+                const titleJob = job.querySelector(flowExperience.items.title);
                 const title = titleJob && titleJob.textContent ?
                   await window.getCleanText(titleJob.textContent) :
                   null;
 
                 if (title) {
-                  const arrayOtherDetails = Array.from(job.querySelectorAll(".pvs-list .pvs-entity div div .t-normal"));
+                  const arrayOtherDetails = Array.from(job.querySelectorAll(flowExperience.items.listDetails));
                   const [companyContent, timeContent, locationContent, descriptionContent] = arrayOtherDetails;
 
-                  const companySpan = companyContent?.querySelector(".t-normal span:first-child") || null;
+                  const companySpan = companyContent?.querySelector(flowExperience.items.itemDetail) || null;
                   const company = companySpan && companySpan.textContent ?
                     await window.getCleanText(companySpan.textContent) :
                     null;
 
-                  const timeSpan = timeContent?.querySelector(".t-normal span:first-child") || null;
+                  const timeSpan = timeContent?.querySelector(flowExperience.items.itemDetail) || null;
                   const time = timeSpan && timeSpan.textContent ?
                     await window.getCleanText(timeSpan.textContent) :
                     null;
 
-                  const locationSpan = locationContent?.querySelector(".t-normal span:first-child") || null;
+                  const locationSpan = locationContent?.querySelector(flowExperience.items.itemDetail) || null;
                   const location = locationSpan && locationSpan.textContent ?
                     await window.getCleanText(locationSpan.textContent) :
                     null;
 
-                  const descriptionSpan = descriptionContent?.querySelector(".t-normal span:first-child") || null;
+                  const descriptionSpan = descriptionContent?.querySelector(flowExperience.items.itemDetail) || null;
                   const description = descriptionSpan && descriptionSpan.textContent ?
                     await window.getCleanText(descriptionSpan.textContent) :
                     null;
@@ -219,37 +229,37 @@ const getData = async (page, url) => {
           const education = node.querySelector("#education")
           if (education) {
 
-            const allEducation = await node.querySelector('.pvs-list__outer-container .pvs-list__footer-wrapper a');
+            const allEducation = await node.querySelector(flowExperience.openPageForMoreItems);
 
             if (!allEducation) {
 
-              const institutions = await Array.from(node.querySelectorAll(".pvs-list__outer-container > .pvs-list > li"));
+              const institutions = await Array.from(node.querySelectorAll(flowExperience.getListCards));
 
               for (const institution of institutions) {
-                const titleInstitution = institution.querySelector(".pvs-list .pvs-entity div div div .t-bold span:nth-child(1)");
+                const titleInstitution = institution.querySelector(flowExperience.items.title);
                 const title = titleInstitution && titleInstitution.textContent ?
                   await window.getCleanText(titleInstitution.textContent) :
                   null;
                 if (title) {
-                  const arrayOtherDetails = Array.from(institution.querySelectorAll(".pvs-list .pvs-entity div div .t-normal"));
+                  const arrayOtherDetails = Array.from(institution.querySelectorAll(flowExperience.items.listDetails));
                   const [courseContent, institutionContent, timeContent, descriptionContent] = arrayOtherDetails;
 
-                  const courseSpan = courseContent?.querySelector(".t-normal span:first-child") || null;
+                  const courseSpan = courseContent?.querySelector(flowExperience.items.itemDetail) || null;
                   const course = courseSpan && courseSpan.textContent ?
                     await window.getCleanText(courseSpan.textContent) :
                     null;
 
-                  const institutionSpan = institutionContent?.querySelector(".t-normal span:first-child") || null;
+                  const institutionSpan = institutionContent?.querySelector(flowExperience.items.itemDetail) || null;
                   const institutionName = institutionSpan && institutionSpan.textContent ?
                     await window.getCleanText(institutionSpan.textContent) :
                     null;
 
-                  const timeSpan = timeContent?.querySelector(".t-normal span:first-child") || null;
+                  const timeSpan = timeContent?.querySelector(flowExperience.items.itemDetail) || null;
                   const time = timeSpan && timeSpan.textContent ?
                     await window.getCleanText(timeSpan.textContent) :
                     null;
 
-                  const descriptionSpan = descriptionContent?.querySelector(".t-normal span:first-child") || null;
+                  const descriptionSpan = descriptionContent?.querySelector(flowExperience.items.itemDetail) || null;
                   const description = descriptionSpan && descriptionSpan.textContent ?
                     await window.getCleanText(descriptionSpan.textContent) :
                     null;
@@ -455,38 +465,46 @@ const getAllExperiences = async (page, url) => {
       "main > section",
       async (nodes) => {
 
+        const flowExperience = {
+          getListCards: ".pvs-list__container .scaffold-finite-scroll__content > .pvs-list > li",
+          items:{
+            title: "li .pvs-entity div div div .t-bold span:nth-child(1)",
+            listDetails: ".pvs-list .pvs-entity div div .t-normal",
+            itemDetail: ".t-normal span:first-child"
+          }
+        }
+
         let allExpandedExperiences = [];
         for (const node of nodes) {
 
-          const jobs = await Array.from(node.querySelectorAll(".pvs-list__container .scaffold-finite-scroll__content > .pvs-list > li"))
-
+          const jobs = await Array.from(node.querySelectorAll(flowExperience.getListCards))
 
           for (const job of jobs) {
-            const titleJob = job.querySelector("li .pvs-entity div div div .t-bold span:nth-child(1)");
+            const titleJob = job.querySelector(flowExperience.items.title);
             const title = titleJob && titleJob.textContent ?
               await window.getCleanText(titleJob.textContent) :
               null;
 
             if (title) {
-              const arrayOtherDetails = Array.from(job.querySelectorAll(".pvs-list .pvs-entity div div .t-normal"));
+              const arrayOtherDetails = Array.from(job.querySelectorAll(flowExperience.items.listDetails));
               const [companyContent, timeContent, locationContent, descriptionContent] = arrayOtherDetails;
 
-              const companySpan = companyContent?.querySelector(".t-normal span:first-child") || null;
+              const companySpan = companyContent?.querySelector(flowExperience.items.itemDetail) || null;
               const company = companySpan && companySpan.textContent ?
                 await window.getCleanText(companySpan.textContent) :
                 null;
 
-              const timeSpan = timeContent?.querySelector(".t-normal span:first-child") || null;
+              const timeSpan = timeContent?.querySelector(flowExperience.items.itemDetail) || null;
               const time = timeSpan && timeSpan.textContent ?
                 await window.getCleanText(timeSpan.textContent) :
                 null;
 
-              const locationSpan = locationContent?.querySelector(".t-normal span:first-child") || null;
+              const locationSpan = locationContent?.querySelector(flowExperience.items.itemDetail) || null;
               const location = locationSpan && locationSpan.textContent ?
                 await window.getCleanText(locationSpan.textContent) :
                 null;
 
-              const descriptionSpan = descriptionContent?.querySelector(".t-normal span:first-child") || null;
+              const descriptionSpan = descriptionContent?.querySelector(flowExperience.items.itemDetail) || null;
               const description = descriptionSpan && descriptionSpan.textContent ?
                 await window.getCleanText(descriptionSpan.textContent) :
                 null;
