@@ -5,6 +5,7 @@ const {
   formatDate,
   getCleanText,
   getLocationFromText,
+  isPeriod
 } = require("../utils");
 const path = require("path");
 
@@ -33,6 +34,7 @@ const setup = async () => {
     await page.exposeFunction("formatDate", formatDate);
     await page.exposeFunction("getDurationInDays", getDurationInDays);
     await page.exposeFunction("getLocationFromText", getLocationFromText);
+    await page.exposeFunction("isPeriod", isPeriod);
     await page.addStyleTag({ content: "{scroll-behavior: auto !important;}" });
 
     await page.setCookie({
@@ -147,9 +149,9 @@ const getData = async (page, url) => {
 
         const flowExperience = {
           openPageForMoreItems: ".pvs-list__outer-container .pvs-list__footer-wrapper a",
-          // getInternalListCards: ".pvs-list__outer-container > .pvs-list > .pvs-list__container",
+          getInternalListCards: ".pvs-entity > .pvs-list > li",
           getListCards: ".pvs-list__outer-container > .pvs-list > li",
-          items:{
+          items: {
             title: ".pvs-list .pvs-entity div div div .t-bold span:nth-child(1)",
             listDetails: ".pvs-list .pvs-entity div div .t-normal",
             itemDetail: ".t-normal span:first-child"
@@ -175,10 +177,6 @@ const getData = async (page, url) => {
 
           if (experiences) {
 
-            // const tt = await node.querySelector(flowExperience.getInternalListCards);
-
-            // console.log(tt, "++++");
-
             const allJobs = await node.querySelector(flowExperience.openPageForMoreItems);
 
             if (!allJobs) {
@@ -186,38 +184,87 @@ const getData = async (page, url) => {
               const jobs = await Array.from(node.querySelectorAll(flowExperience.getListCards))
 
               for (const job of jobs) {
-                const titleJob = job.querySelector(flowExperience.items.title);
-                const title = titleJob && titleJob.textContent ?
-                  await window.getCleanText(titleJob.textContent) :
+
+                const titleTopAux = job.querySelector(flowExperience.items.title);
+                const titleTop = titleTopAux && titleTopAux.textContent ?
+                  await window.getCleanText(titleTopAux.textContent) :
                   null;
 
-                if (title) {
-                  const arrayOtherDetails = Array.from(job.querySelectorAll(flowExperience.items.listDetails));
-                  const [companyContent, timeContent, locationContent, descriptionContent] = arrayOtherDetails;
+                let internalListExperiences = [];
 
-                  const companySpan = companyContent?.querySelector(flowExperience.items.itemDetail) || null;
-                  const company = companySpan && companySpan.textContent ?
-                    await window.getCleanText(companySpan.textContent) :
+                const internalList = await Array.from(job.querySelectorAll(flowExperience.getInternalListCards));
+
+                if (internalList.length > 0) {
+                  for (const itemInternal of internalList) {
+                    const titleJob = itemInternal.querySelector(flowExperience.items.title);
+                    const title = titleJob && titleJob.textContent ?
+                      await window.getCleanText(titleJob.textContent) :
+                      null;
+
+                    if (title) {
+                      const arrayOtherDetails = Array.from(itemInternal.querySelectorAll(flowExperience.items.listDetails));
+                      const [companyContent, timeContent, locationContent, descriptionContent] = arrayOtherDetails;
+
+                      const companySpan = companyContent?.querySelector(flowExperience.items.itemDetail) || null;
+                      const company = companySpan && companySpan.textContent ?
+                        await window.getCleanText(companySpan.textContent) :
+                        null;
+
+                      const timeSpan = timeContent?.querySelector(flowExperience.items.itemDetail) || null;
+                      const time = timeSpan && timeSpan.textContent ?
+                        await window.getCleanText(timeSpan.textContent) :
+                        null;
+
+                      const locationSpan = locationContent?.querySelector(flowExperience.items.itemDetail) || null;
+                      const location = locationSpan && locationSpan.textContent ?
+                        await window.getCleanText(locationSpan.textContent) :
+                        null;
+
+                      const descriptionSpan = descriptionContent?.querySelector(flowExperience.items.itemDetail) || null;
+                      const description = descriptionSpan && descriptionSpan.textContent ?
+                        await window.getCleanText(descriptionSpan.textContent) :
+                        null;
+
+                      let otherDetails = [company, time, location, description].filter(item => item)
+
+                      internalListExperiences.push({ title, otherDetails });
+                    }
+                  }
+                  experienceArray.push({ title: titleTop, allExperiences: internalListExperiences })
+                } else {
+                  const titleJob = job.querySelector(flowExperience.items.title);
+                  const title = titleJob && titleJob.textContent ?
+                    await window.getCleanText(titleJob.textContent) :
                     null;
 
-                  const timeSpan = timeContent?.querySelector(flowExperience.items.itemDetail) || null;
-                  const time = timeSpan && timeSpan.textContent ?
-                    await window.getCleanText(timeSpan.textContent) :
-                    null;
+                  if (title) {
+                    const arrayOtherDetails = Array.from(job.querySelectorAll(flowExperience.items.listDetails));
+                    const [companyContent, timeContent, locationContent, descriptionContent] = arrayOtherDetails;
 
-                  const locationSpan = locationContent?.querySelector(flowExperience.items.itemDetail) || null;
-                  const location = locationSpan && locationSpan.textContent ?
-                    await window.getCleanText(locationSpan.textContent) :
-                    null;
+                    const companySpan = companyContent?.querySelector(flowExperience.items.itemDetail) || null;
+                    const company = companySpan && companySpan.textContent ?
+                      await window.getCleanText(companySpan.textContent) :
+                      null;
 
-                  const descriptionSpan = descriptionContent?.querySelector(flowExperience.items.itemDetail) || null;
-                  const description = descriptionSpan && descriptionSpan.textContent ?
-                    await window.getCleanText(descriptionSpan.textContent) :
-                    null;
+                    const timeSpan = timeContent?.querySelector(flowExperience.items.itemDetail) || null;
+                    const time = timeSpan && timeSpan.textContent ?
+                      await window.getCleanText(timeSpan.textContent) :
+                      null;
 
-                  let otherDetails = [company, time, location, description].filter(item => item)
+                    const locationSpan = locationContent?.querySelector(flowExperience.items.itemDetail) || null;
+                    const location = locationSpan && locationSpan.textContent ?
+                      await window.getCleanText(locationSpan.textContent) :
+                      null;
 
-                  experienceArray.push({ title, otherDetails });
+                    const descriptionSpan = descriptionContent?.querySelector(flowExperience.items.itemDetail) || null;
+                    const description = descriptionSpan && descriptionSpan.textContent ?
+                      await window.getCleanText(descriptionSpan.textContent) :
+                      null;
+
+                    let otherDetails = [company, time, location, description].filter(item => item)
+
+                    experienceArray.push({ title, otherDetails });
+                  }
                 }
               }
             } else {
@@ -465,9 +512,12 @@ const getAllExperiences = async (page, url) => {
       "main > section",
       async (nodes) => {
 
+        //  getInternalListCards: "li .pvs-entity div .pvs-list__outer-container .pvs-list > li > .pvs-list__container > .scaffold-finite-scroll > .scaffold-finite-scroll__content > .pvs-list > li > .pvs-entity",
+
         const flowExperience = {
-          getListCards: ".pvs-list__container .scaffold-finite-scroll__content > .pvs-list > li",
-          items:{
+          getListCards: ".pvs-list__container .scaffold-finite-scroll__content > .pvs-list > .pvs-list__item--line-separated",
+          getInternalListCards: "li .pvs-entity div .pvs-list__outer-container .pvs-list li .pvs-list__container .scaffold-finite-scroll .scaffold-finite-scroll__content > .pvs-list > li",
+          items: {
             title: "li .pvs-entity div div div .t-bold span:nth-child(1)",
             listDetails: ".pvs-list .pvs-entity div div .t-normal",
             itemDetail: ".t-normal span:first-child"
@@ -480,38 +530,91 @@ const getAllExperiences = async (page, url) => {
           const jobs = await Array.from(node.querySelectorAll(flowExperience.getListCards))
 
           for (const job of jobs) {
-            const titleJob = job.querySelector(flowExperience.items.title);
-            const title = titleJob && titleJob.textContent ?
-              await window.getCleanText(titleJob.textContent) :
+
+            const titleTopAux = job.querySelector(flowExperience.items.title);
+            const titleTop = titleTopAux && titleTopAux.textContent ?
+              await window.getCleanText(titleTopAux.textContent) :
               null;
 
-            if (title) {
-              const arrayOtherDetails = Array.from(job.querySelectorAll(flowExperience.items.listDetails));
-              const [companyContent, timeContent, locationContent, descriptionContent] = arrayOtherDetails;
+            let internalListExperiences = [];
 
-              const companySpan = companyContent?.querySelector(flowExperience.items.itemDetail) || null;
-              const company = companySpan && companySpan.textContent ?
-                await window.getCleanText(companySpan.textContent) :
+            const internalList = await Array.from(job.querySelectorAll(flowExperience.getInternalListCards));
+
+            if (internalList.length > 0) {
+              for (const itemInternal of internalList) {
+                const titleJob = itemInternal.querySelector(flowExperience.items.title);
+                const title = titleJob && titleJob.textContent ?
+                  await window.getCleanText(titleJob.textContent) :
+                  null;
+
+                if (title) {
+                  const arrayOtherDetails = Array.from(itemInternal.querySelectorAll(flowExperience.items.listDetails));
+                  const [companyContent, timeContent, locationContent, descriptionContent] = arrayOtherDetails;
+
+                  const companySpan = companyContent?.querySelector(flowExperience.items.itemDetail) || null;
+                  const company = companySpan && companySpan.textContent ?
+                    await window.getCleanText(companySpan.textContent) :
+                    null;
+
+                  const timeSpan = timeContent?.querySelector(flowExperience.items.itemDetail) || null;
+                  const time = timeSpan && timeSpan.textContent ?
+                    await window.getCleanText(timeSpan.textContent) :
+                    null;
+
+                  const locationSpan = locationContent?.querySelector(flowExperience.items.itemDetail) || null;
+                  const location = locationSpan && locationSpan.textContent ?
+                    await window.getCleanText(locationSpan.textContent) :
+                    null;
+
+                  const descriptionSpan = descriptionContent?.querySelector(flowExperience.items.itemDetail) || null;
+                  const description = descriptionSpan && descriptionSpan.textContent ?
+                    await window.getCleanText(descriptionSpan.textContent) :
+                    null;
+
+                  let otherDetails = [company, time, location, description].filter(item => item)
+
+                  internalListExperiences.push({ title, otherDetails });
+                }
+              }
+
+              allExpandedExperiences.push({ title: titleTop, allExperiences: internalListExperiences })
+            } else {
+              const titleJob = job.querySelector(flowExperience.items.title);
+              const title = titleJob && titleJob.textContent ?
+                await window.getCleanText(titleJob.textContent) :
                 null;
 
-              const timeSpan = timeContent?.querySelector(flowExperience.items.itemDetail) || null;
-              const time = timeSpan && timeSpan.textContent ?
-                await window.getCleanText(timeSpan.textContent) :
-                null;
+              if (title) {
+                const arrayOtherDetails = Array.from(job.querySelectorAll(flowExperience.items.listDetails));
+                const [companyContent, timeContent, locationContent, descriptionContent] = arrayOtherDetails;
 
-              const locationSpan = locationContent?.querySelector(flowExperience.items.itemDetail) || null;
-              const location = locationSpan && locationSpan.textContent ?
-                await window.getCleanText(locationSpan.textContent) :
-                null;
+                const companySpan = companyContent?.querySelector(flowExperience.items.itemDetail) || null;
+                const company = companySpan && companySpan.textContent ?
+                  await window.getCleanText(companySpan.textContent) :
+                  null;
 
-              const descriptionSpan = descriptionContent?.querySelector(flowExperience.items.itemDetail) || null;
-              const description = descriptionSpan && descriptionSpan.textContent ?
-                await window.getCleanText(descriptionSpan.textContent) :
-                null;
+                const timeSpan = timeContent?.querySelector(flowExperience.items.itemDetail) || null;
+                const time = timeSpan && timeSpan.textContent ?
+                  await window.getCleanText(timeSpan.textContent) :
+                  null;
 
-              let otherDetails = [company, time, location, description].filter(item => item)
+                
+                // console.log(await isPeriod(time), time);
 
-              allExpandedExperiences.push({ title, otherDetails });
+                const locationSpan = locationContent?.querySelector(flowExperience.items.itemDetail) || null;
+                const location = locationSpan && locationSpan.textContent ?
+                  await window.getCleanText(locationSpan.textContent) :
+                  null;
+
+                const descriptionSpan = descriptionContent?.querySelector(flowExperience.items.itemDetail) || null;
+                const description = descriptionSpan && descriptionSpan.textContent ?
+                  await window.getCleanText(descriptionSpan.textContent) :
+                  null;
+
+                let otherDetails = [company, time, location, description].filter(item => item)
+
+                allExpandedExperiences.push({ title, otherDetails });
+              }
             }
           }
 

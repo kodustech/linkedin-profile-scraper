@@ -52,9 +52,17 @@ const getCleanText = async (text) => {
   return cleanText
 }
 
+const isPeriod = async (text) => {
+  
+  const words = [' m ', ' mês ', ' ano ', ' anos ' ,' meses ', ' anos '];
+  
+  return words.filter(word => text.includes(word)) !== null;
+}
+
 module.exports = {
   formatDate,
   getDurationInDays,
   getCleanText,
-  getLocationFromText
+  getLocationFromText,
+  isPeriod
 }
