@@ -73,11 +73,11 @@ console.log(`Server setup: Setting up...`);
         );
 
         if(urlExperiences){
-          allExperiences = await getAllExperiences(page, urlExperiences);
+          allExperiences = await getAllExperiences('experience',page, urlExperiences);
         }
 
         if(urlEducations){
-          allEducations = await getAllExperiences(page, urlEducations);
+          allEducations = await getAllExperiences('education',page, urlEducations);
         }
 
         res.json({

@@ -52,11 +52,63 @@ const getCleanText = async (text) => {
   return cleanText
 }
 
-const isPeriod = async (text) => {
-  
-  const words = [' m ', ' mês ', ' ano ', ' anos ' ,' meses ', ' anos '];
-  
-  return words.filter(word => text.includes(word)) !== null;
+const isPeriod = (type, text) => {
+
+  if (type === 'experience') {
+    const words = ['mês', 'ano', 'anos', 'meses', 'anos', 'momento'];
+    const excludeWords = ['Temporário'];
+
+    return words.filter(word => text.indexOf(word) !== -1 && !excludeWords.includes(word)).length !== 0;
+  }else if (type === 'education'){
+    const words = ['-'];
+
+    return words.filter(word => text.indexOf(word) !== -1).length !== 0;
+  }
+
+  return false;
+}
+
+const returnDetailsByExperience = (type, array) => {
+
+  if (type === 'experience') {
+
+    if (array.length === 1) {
+      const [item] = array;
+
+      return isPeriod(item) ? { period: item } : { company: item };
+    } else if (array.length === 2) {
+
+      const [first, second] = array;
+
+      if (isPeriod(first)) {
+
+        return { period: first, location: second }
+      } else if (isPeriod(second)) {
+
+        return { company: first, period: second }
+      } else {
+
+        return { company: first, location: second }
+      }
+    } else if (array.length === 3) {
+
+      const [first, second, third] = array;
+
+      return { company: first, period: second, location: third }
+    }
+  }else if (type === 'education') {
+    if (array.length === 1) {
+      const [item] = array;
+
+      return isPeriod(type, item) ? { period: item } : { company: item };
+    } else {
+      const [first, second] = array;
+
+      return { company: first, period: second }
+    }
+  }
+
+  return null;
 }
 
 module.exports = {
@@ -64,5 +116,6 @@ module.exports = {
   getDurationInDays,
   getCleanText,
   getLocationFromText,
-  isPeriod
+  isPeriod,
+  returnDetailsByExperience
 }
