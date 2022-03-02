@@ -75,20 +75,20 @@ const returnDetailsByExperience = (type, array) => {
     if (array.length === 1) {
       const [item] = array;
 
-      return isPeriod(item) ? { period: item } : { company: item };
+      return isPeriod(type, item) ? { company: '', period: item, location: '' } : { company: item, period: '', location: '' };
     } else if (array.length === 2) {
 
       const [first, second] = array;
 
-      if (isPeriod(first)) {
+      if (isPeriod(type ,first)) {
 
-        return { period: first, location: second }
-      } else if (isPeriod(second)) {
+        return {company: '', period: first, location: second }
+      } else if (isPeriod(type, second)) {
 
-        return { company: first, period: second }
+        return { company: first, period: second, location: '' }
       } else {
 
-        return { company: first, location: second }
+        return { company: first, period: '', location: second }
       }
     } else if (array.length === 3) {
 
@@ -100,11 +100,11 @@ const returnDetailsByExperience = (type, array) => {
     if (array.length === 1) {
       const [item] = array;
 
-      return isPeriod(type, item) ? { period: item } : { company: item };
+      return isPeriod(type, item) ? { company: '', period: item, location: ''} : { company: item, period: '', location: ''  };
     } else {
       const [first, second] = array;
 
-      return { company: first, period: second }
+      return { company: first, period: second, location: ''}
     }
   }
 

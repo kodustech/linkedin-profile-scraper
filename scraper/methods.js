@@ -208,8 +208,8 @@ const getData = async (page, url) => {
                     if (title) {
 
                       for (let i = 2; i <= 4; i++) {
-                        const item = itemInternal?.querySelector(`${flowExperience.items.listDetails}:nth-child(${i})`) || null;
-                        const itemSelected = item?.querySelector(flowExperience.items.itemDetail) || null;
+                        const item = itemInternal.querySelector(`${flowExperience.items.listDetails}:nth-child(${i})`) || null;
+                        const itemSelected = item && item.querySelector(flowExperience.items.itemDetail) || null;
                         const itemText = itemSelected && itemSelected.textContent ?
                           await window.getCleanText(itemSelected.textContent) :
                           null;
@@ -220,7 +220,7 @@ const getData = async (page, url) => {
       
                       const details = await returnDetailsByExperience('experience', arrayDetails);
       
-                      const descriptionSpan = itemInternal?.querySelector(flowExperience.items.description) || null;
+                      const descriptionSpan = itemInternal.querySelector(flowExperience.items.description) || null;
                       const description = descriptionSpan && descriptionSpan.textContent ?
                         await window.getCleanText(descriptionSpan.textContent) :
                         null;
@@ -240,8 +240,8 @@ const getData = async (page, url) => {
                   if (title) {
 
                     for (let i = 2; i <= 4; i++) {
-                      const item = job?.querySelector(`${flowExperience.items.listDetails}:nth-child(${i})`) || null;
-                      const itemSelected = item?.querySelector(flowExperience.items.itemDetail) || null;
+                      const item = job.querySelector(`${flowExperience.items.listDetails}:nth-child(${i})`) || null;
+                      const itemSelected = item && item.querySelector(flowExperience.items.itemDetail) || null;
                       const itemText = itemSelected && itemSelected.textContent ?
                         await window.getCleanText(itemSelected.textContent) :
                         null;
@@ -252,7 +252,7 @@ const getData = async (page, url) => {
     
                     const details = await returnDetailsByExperience('experience', arrayDetails);
     
-                    const descriptionSpan = job?.querySelector(flowExperience.items.description) || null;
+                    const descriptionSpan = job.querySelector(flowExperience.items.description) || null;
                     const description = descriptionSpan && descriptionSpan.textContent ?
                       await window.getCleanText(descriptionSpan.textContent) :
                       null;
@@ -285,8 +285,8 @@ const getData = async (page, url) => {
                 if (title) {
 
                   for (let i = 2; i <= 4; i++) {
-                    const item = institution?.querySelector(`${flowExperience.items.listDetails}:nth-child(${i})`) || null;
-                    const itemSelected = item?.querySelector(flowExperience.items.itemDetail) || null;
+                    const item = institution.querySelector(`${flowExperience.items.listDetails}:nth-child(${i})`) || null;
+                    const itemSelected = item && item.querySelector(flowExperience.items.itemDetail) || null;
                     const itemText = itemSelected && itemSelected.textContent ?
                       await window.getCleanText(itemSelected.textContent) :
                       null;
@@ -297,7 +297,7 @@ const getData = async (page, url) => {
   
                   const details = await returnDetailsByExperience('education', arrayDetails);
   
-                  const descriptionSpan = institution?.querySelector(flowExperience.items.description) || null;
+                  const descriptionSpan = institution.querySelector(flowExperience.items.description) || null;
                   const description = descriptionSpan && descriptionSpan.textContent ?
                     await window.getCleanText(descriptionSpan.textContent) :
                     null;
@@ -539,8 +539,8 @@ const getAllExperiences = async (type , page, url) => {
                 if (title) {
 
                   for (let i = 2; i <= 4; i++) {
-                    const item = itemInternal?.querySelector(`${flowExperience.items.listDetails}:nth-child(${i})`) || null;
-                    const itemSelected = item?.querySelector(flowExperience.items.itemDetail) || null;
+                    const item = itemInternal.querySelector(`${flowExperience.items.listDetails}:nth-child(${i})`) || null;
+                    const itemSelected = item && item.querySelector(flowExperience.items.itemDetail) || null;
                     const itemText = itemSelected && itemSelected.textContent ?
                       await window.getCleanText(itemSelected.textContent) :
                       null;
@@ -551,7 +551,7 @@ const getAllExperiences = async (type , page, url) => {
 
                   const details = await returnDetailsByExperience(type, arrayDetails);
 
-                  const descriptionSpan = itemInternal?.querySelector(flowExperience.items.description) || null;
+                  const descriptionSpan = itemInternal.querySelector(flowExperience.items.description) || null;
                   const description = descriptionSpan && descriptionSpan.textContent ?
                     await window.getCleanText(descriptionSpan.textContent) :
                     null;
@@ -571,8 +571,8 @@ const getAllExperiences = async (type , page, url) => {
               if (title) {
 
                 for (let i = 2; i <= 4; i++) {
-                  const item = job?.querySelector(`${flowExperience.items.listDetails}:nth-child(${i})`) || null;
-                  const itemSelected = item?.querySelector(flowExperience.items.itemDetail) || null;
+                  const item = job.querySelector(`${flowExperience.items.listDetails}:nth-child(${i})`) || null;
+                  const itemSelected = item && item.querySelector(flowExperience.items.itemDetail) || null;
                   const itemText = itemSelected && itemSelected.textContent ?
                     await window.getCleanText(itemSelected.textContent) :
                     null;
@@ -583,7 +583,7 @@ const getAllExperiences = async (type , page, url) => {
 
                 const details = await returnDetailsByExperience(type, arrayDetails);
 
-                const descriptionSpan = job?.querySelector(flowExperience.items.description) || null;
+                const descriptionSpan = job.querySelector(flowExperience.items.description) || null;
                 const description = descriptionSpan && descriptionSpan.textContent ?
                   await window.getCleanText(descriptionSpan.textContent) :
                   null;
