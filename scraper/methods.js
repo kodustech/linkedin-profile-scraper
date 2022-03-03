@@ -153,8 +153,8 @@ const getData = async (page, url) => {
 
         const flowExperience = {
           openPageForMoreItems: ".pvs-list__outer-container .pvs-list__footer-wrapper a",
-          getInternalListCards: ".pvs-entity > .pvs-list > li",
-          getListCards: ".pvs-list__outer-container > .pvs-list > li",
+          getInternalListCards: ".pvs-entity > div > .pvs-list__outer-container > .pvs-list > li > .pvs-entity",
+          getListCards: ".pvs-list__outer-container > .pvs-list > .artdeco-list__item",
           items: {
             title: ".pvs-list .pvs-entity div div div .t-bold span:nth-child(1)",
             listDetails: ".pvs-list .pvs-entity div div .t-normal",
@@ -225,14 +225,8 @@ const getData = async (page, url) => {
                         await window.getCleanText(descriptionSpan.textContent) :
                         null;
 
-                        if(type === 'experience' && details){
-                          const { company, ...remaining } = details;
-                          experienceArray.push({ company: titleTop, title, description, ...remaining });
-                        }else{
-                          if(type === 'education' && details ){
-                            experienceArray.push({ schoolName: title, ...details, fieldOfStudy: description || ''});
-                          }
-                        }
+                      const { company, ...remaining } = details;
+                      experienceArray.push({ company: titleTop, title, description, ...remaining });
                     }
                   }
                 } else {
