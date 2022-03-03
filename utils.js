@@ -75,40 +75,70 @@ const returnDetailsByExperience = (type, array) => {
     if (array.length === 1) {
       const [item] = array;
 
-      return isPeriod(type, item) ? { company: '', period: item, location: '' } : { company: item, period: '', location: '' };
+      return isPeriod(type, item) ? { company: '', ...getDates(type, item), location: '' } : { company: item, ...getDates(type, ''), location: '' };
     } else if (array.length === 2) {
 
       const [first, second] = array;
 
       if (isPeriod(type ,first)) {
 
-        return {company: '', period: first, location: second }
+        return {company: '', ...getDates(type, first), location: second }
       } else if (isPeriod(type, second)) {
 
-        return { company: first, period: second, location: '' }
+        return { company: first, ...getDates(type, second), location: '' }
       } else {
 
-        return { company: first, period: '', location: second }
+        return { company: first, ...getDates(type, ''), location: second }
       }
     } else if (array.length === 3) {
 
       const [first, second, third] = array;
 
-      return { company: first, period: second, location: third }
+      return { company: first, ...getDates(type, second), location: third }
     }
   }else if (type === 'education') {
     if (array.length === 1) {
       const [item] = array;
 
-      return isPeriod(type, item) ? { company: '', period: item, location: ''} : { company: item, period: '', location: ''  };
+      return isPeriod(type, item) ? { degreeName: '', ...getDates(type, item)} : { degreeName: item, ...getDates(type, '')};
     } else {
       const [first, second] = array;
 
-      return { company: first, period: second, location: ''}
+      return { degreeName: first, ...getDates(type, second)}
     }
   }
 
   return null;
+}
+
+const getDates = (type, period) => {
+  if(type === 'experience'){
+    if(!period || period.length === 0){
+      return { startDate: '', endDate: '', endDateIsPresent: false }
+    }
+    const [startDate, end] = period.split('-');
+  
+    const [ endDate, duration] = end.split('·');
+  
+    return { startDate, endDate, endDateIsPresent: end && end.includes('momento') }
+  }else if(type === 'education'){
+    if(!period || period.length === 0){
+      return { startDate: '', endDate: '', }
+    }
+    const [startDate, end] = period.split('-');
+  
+    const [ endDate, duration] = end.split('·');
+  
+    return { startDate, endDate }
+  }
+
+}
+
+const academicExperienceIsValid = (experience)=>{
+
+  const { startDate, endDate, ...remainingData } = experience;
+
+  return false;
 }
 
 module.exports = {
@@ -117,5 +147,6 @@ module.exports = {
   getCleanText,
   getLocationFromText,
   isPeriod,
-  returnDetailsByExperience
+  returnDetailsByExperience,
+  academicExperienceIsValid
 }
