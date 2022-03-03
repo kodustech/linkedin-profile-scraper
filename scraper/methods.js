@@ -516,9 +516,8 @@ const getAllExperiences = async (type , page, url) => {
 
 const getAllSkills = async (page, url)=>{
   await page.goto(url);
-  // await page.waitForTimeout(1000);
-
   page.on('console', (msg) => console.log('PAGE LOG:', msg.text()));
+  
   try {
     return await page.$$eval(
       "main > section",
