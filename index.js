@@ -25,7 +25,8 @@ const {
 const {
   setup,
   getData,
-  getAllExperiences
+  getAllExperiences,
+  getAllSkills
 } = require("./scraper/methods");
 
 console.log(`Server setup: Setting up...`);
@@ -66,8 +67,9 @@ console.log(`Server setup: Setting up...`);
 
         let allExperiences = null;
         let allEducations = null;
+        let allSkills = null;
 
-        const { urlExperiences, urlEducations, ...remainingData } = await getData(
+        const { urlExperiences, urlEducations, urlSkills, ...remainingData } = await getData(
           page,
           urlToScrape
         );
@@ -80,10 +82,15 @@ console.log(`Server setup: Setting up...`);
           allEducations = await getAllExperiences('education',page, urlEducations);
         }
 
+        if(urlSkills){
+          allSkills = await getAllSkills(page, urlSkills);
+        }
+
         res.json({
           ...remainingData,
           experiences: urlExperiences ? allExperiences : remainingData.experiences,
-          education: urlEducations ? allEducations : remainingData.education
+          education: urlEducations ? allEducations : remainingData.education,
+          skills: urlSkills ? allSkills : remainingData.skills
         });
       } else {
         res.json({

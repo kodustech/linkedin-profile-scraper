@@ -147,7 +147,11 @@ const getData = async (page, url) => {
       };
     });
 
-    const { allExperiences, allEducations, urlExperiences, urlEducations } = await page.$$eval(
+    /**
+     * Retorno da lista de experiências profissionais, acadêmicas, competências
+     */
+
+    const { allExperiences, allEducations, allSkills, urlExperiences, urlEducations, urlSkills } = await page.$$eval(
       "main > section",
       async (nodes) => {
 
@@ -165,6 +169,7 @@ const getData = async (page, url) => {
 
         let experienceArray = [];
         let educationArray = [];
+        let skillsArray = [];
 
 
         /**
@@ -176,12 +181,21 @@ const getData = async (page, url) => {
         * Candidato com muitas experiências acadêmicas
         */
         let urlEducations = null;
+
+        /**
+        * Candidato com muitas experiências acadêmicas
+        */
+         let urlSkills = null;
+
         for (const node of nodes) {
 
           const experiences = node.querySelector("#experience")
 
           if (experiences) {
 
+            /**
+            * Possui um link para todas as experiências?
+            */
             const allJobs = await node.querySelector(flowExperience.openPageForMoreItems);
 
             if (!allJobs) {
@@ -194,7 +208,10 @@ const getData = async (page, url) => {
                 const titleTop = titleTopAux && titleTopAux.textContent ?
                   await window.getCleanText(titleTopAux.textContent) :
                   null;
-
+                
+                /**
+                * Verificando se existe uma lista interna de experiências
+                */
                 const internalList = await Array.from(job.querySelectorAll(flowExperience.getInternalListCards));
 
                 if (internalList && internalList.length > 0) {
@@ -226,10 +243,13 @@ const getData = async (page, url) => {
                         null;
 
                       const { company, ...remaining } = details;
-                      experienceArray.push({ company: titleTop, title, description, ...remaining });
+                      experienceArray.push({ company: titleTop, title, description: description || '' , ...remaining });
                     }
                   }
                 } else {
+                  /**
+                  * Se não possui uma lista interna, pego as experiências normalmente
+                  */
                   const titleJob = job.querySelector(flowExperience.items.title);
                   const title = titleJob && titleJob.textContent ?
                     await window.getCleanText(titleJob.textContent) :
@@ -258,12 +278,15 @@ const getData = async (page, url) => {
                       null;
 
                     if(details){
-                      experienceArray.push({ title, ...details, description});
+                      experienceArray.push({ title, ...details, description: description || ''});
                     }
                   }
                 }
               }
             } else {
+            /**
+            * Guardando o link com todas as experiências
+            */
               urlExperiences = allJobs && allJobs.getAttribute("href") ? allJobs.getAttribute("href") : null;
             }
 
@@ -313,9 +336,41 @@ const getData = async (page, url) => {
               urlEducations = allEducation && allEducation.getAttribute("href") ? allEducation.getAttribute("href") : null;
             }
           }
+
+
+          const skills = node.querySelector("#skills")
+          if (skills) {
+        
+            const flowSkills = {
+              getListCards: ".pvs-list__outer-container .pvs-list li .pvs-entity",
+              title: ".pvs-entity div div div .t-bold span:nth-child(1)"
+            }
+
+            const allSkills = await node.querySelector(flowExperience.openPageForMoreItems);
+
+            if (!allSkills) {
+
+              const listSkills = await Array.from(node.querySelectorAll(flowSkills.getListCards));
+
+              for (const skill of listSkills) {
+                
+                const titleskill = skill.querySelector(flowSkills.title);
+                const title = titleskill && titleskill.textContent ?
+                  await window.getCleanText(titleskill.textContent) :
+                  null;
+                if (title) {
+                  skillsArray.push(title);
+                }
+              }
+            } else {
+              urlSkills = allSkills && allSkills.getAttribute("href") ? allSkills.getAttribute("href") : null;
+            }
+          }
+
+          
         }
 
-        return { allExperiences: experienceArray, allEducations: educationArray, urlExperiences, urlEducations };
+        return { allExperiences: experienceArray, allEducations: educationArray, allSkills: skillsArray, urlExperiences, urlEducations, urlSkills };
       }
     )
 
@@ -323,8 +378,10 @@ const getData = async (page, url) => {
       userProfile,
       experiences: allExperiences,
       education: allEducations,
+      skills: allSkills,
       urlExperiences,
-      urlEducations
+      urlEducations,
+      urlSkills
     };
   } catch (error) {
     throw new Error(error);
@@ -397,7 +454,7 @@ const getAllExperiences = async (type , page, url) => {
 
                     if(type === 'experience' && details){
                       const { company, ...remaining } = details;
-                      allExpandedExperiences.push({ company: titleTop, title, description, ...remaining });
+                      allExpandedExperiences.push({ company: titleTop, title, description: description || '', ...remaining });
                     }else{
                       if(type === 'education'&& details){
                         allExpandedExperiences.push({ schoolName: title, ...details, fieldOfStudy: description || ''});
@@ -434,7 +491,7 @@ const getAllExperiences = async (type , page, url) => {
                   null;
 
                 if(type === 'experience' && details){
-                  allExpandedExperiences.push({ title, ...details, description });
+                  allExpandedExperiences.push({ title, ...details, description: description || '' });
                 }else{
                   if(type === 'education' && details){
                     allExpandedExperiences.push({ schoolName: title, ...details, fieldOfStudy: description || ''});
@@ -457,8 +514,46 @@ const getAllExperiences = async (type , page, url) => {
   }
 }
 
+const getAllSkills = async (page, url)=>{
+  await page.goto(url);
+  // await page.waitForTimeout(1000);
+
+  page.on('console', (msg) => console.log('PAGE LOG:', msg.text()));
+  try {
+    return await page.$$eval(
+      "main > section",
+      async (nodes) => {
+
+        let arraySkills = [];
+        
+        const flowSkills = {
+          getListCards: ".artdeco-tabpanel .pvs-list__container div div .pvs-list > .pvs-list__paged-list-item",
+          title: ".pvs-list__paged-list-item .pvs-entity div div a .t-bold span:nth-child(1)"
+          
+        }
+        for(node of nodes){
+
+          const listSkills = await Array.from(node.querySelectorAll(flowSkills.getListCards));
+          for (const skill of listSkills) {
+            const titleskill = skill.querySelector(flowSkills.title);
+            const title = titleskill && titleskill.textContent ?
+              await window.getCleanText(titleskill.textContent) :
+              null;
+            if (title) {
+              arraySkills.push(title);
+            }
+          }
+        }
+        return arraySkills;
+      })
+  } catch (error) {
+    throw new Error(error);
+  }
+}
+
 module.exports = {
   setup,
   getData,
-  getAllExperiences
+  getAllExperiences,
+  getAllSkills
 };
