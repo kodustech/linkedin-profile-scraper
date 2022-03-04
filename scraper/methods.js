@@ -5,6 +5,9 @@ const {
   formatDate,
   getCleanText,
   getLocationFromText,
+  isPeriod,
+  returnDetailsByExperience,
+  academicExperienceIsValid
 } = require("../utils");
 const path = require("path");
 
@@ -33,6 +36,9 @@ const setup = async () => {
     await page.exposeFunction("formatDate", formatDate);
     await page.exposeFunction("getDurationInDays", getDurationInDays);
     await page.exposeFunction("getLocationFromText", getLocationFromText);
+    await page.exposeFunction("isPeriod", isPeriod);
+    await page.exposeFunction("returnDetailsByExperience", returnDetailsByExperience);
+    await page.exposeFunction("academicExperienceIsValid", academicExperienceIsValid);
     await page.addStyleTag({ content: "{scroll-behavior: auto !important;}" });
 
     await page.setCookie({
@@ -40,6 +46,9 @@ const setup = async () => {
       value: process.env.LINKEDIN_SESSION_COOKIE_VALUE,
       domain: ".www.linkedin.com",
     });
+
+
+    await page.goto('https://www.linkedin.com');
 
     return {
       page,
@@ -54,21 +63,12 @@ const getData = async (page, url) => {
   try {
     await page.goto(url);
 
-    const newExpandButtonsSelectors = [
-      ".pv-profile-section.pv-about-section .inline-show-more-text__button",
-    ];
-
     const expandButtonsSelectors = [
       ".pv-profile-section.pv-about-section .inline-show-more-text__button", // About
       "#experience-section .pv-profile-section__see-more-inline", // Experience
       ".pv-profile-section.education-section .pv-profile-section__see-more-inline", // Education
       ".pv-skill-categories-section .pv-profile-section__card-action-bar", // Skills
       ".pv-profile-section--certifications-section .pv-profile-section__see-more-inline", // certifications-section
-    ];
-
-    const seeMoreButtonsSelectors = [
-      '.pv-entity__description .lt-line-clamp__line.lt-line-clamp__line--last .lt-line-clamp__more[href="#"]',
-      '.lt-line-clamp__more[href="#"]:not(.lt-line-clamp__ellipsis--dummy)',
     ];
 
     console.log('Expanding all sections by clicking their "See more" buttons');
@@ -86,52 +86,32 @@ const getData = async (page, url) => {
       }
     }
 
-    //console.log('dois', buttonSelector);
-
-
-    // To give a little room to let data appear. Setting this to 0 might result in "Node is detached from document" errors
-
-    // for (const seeMoreButtonSelector of seeMoreButtonsSelectors) {
-    //   console.log(seeMoreButtonSelector, await page.$$(seeMoreButtonSelector))
-    //   const buttons = await page.$$(seeMoreButtonSelector);
-
-
-    //   for (const button of buttons) {
-
-    //     // if (button) {
-    //     //   await button.click();
-    //     // }
-    //   }
-    // }
-
-    // console.log('tres', seeMoreButtonSelector);
     page.on('console', (msg) => console.log('PAGE LOG:', msg.text()));
 
-    await page.evaluate(async () => {
+    /**
+     * Informações iniciais do usuário
+     */
+    const userProfile = await page.evaluate(async () => {
       const profileSection = document.querySelector(".pv-top-card");
-
-      console.log(profileSection);
-
-      console.log('tres', profileSection);
 
       const url = window.location.href;
 
       const fullNameElement = profileSection.querySelector(
-        ".pv-top-card--list li:first-child"
+        ".pv-text-details__left-panel h1"
       );
       const fullName =
         fullNameElement && fullNameElement.textContent ?
           await window.getCleanText(fullNameElement.textContent) :
           null;
 
-      const titleElement = profileSection.querySelector("h2");
+      const titleElement = profileSection.querySelector(".ph5 .relative .pv-text-details__left-panel .text-body-medium");
       const title =
         titleElement && titleElement.textContent ?
           await window.getCleanText(titleElement.textContent) :
           null;
 
       const locationElement = profileSection.querySelector(
-        ".pv-top-card--list.pv-top-card--list-bullet.mt1 li:first-child"
+        ".ph5 .relative .pb2 .text-body-small"
       );
       const locationText =
         locationElement && locationElement.textContent ?
@@ -139,29 +119,23 @@ const getData = async (page, url) => {
           null;
       const location = await getLocationFromText(locationText);
 
+
       const photoElement =
-        profileSection.querySelector(".pv-top-card__photo") ||
-        profileSection.querySelector(".profile-photo-edit__preview");
+        profileSection.querySelector(".pv-top-card-profile-picture__image");
+
+
       const photo =
         photoElement && photoElement.getAttribute("src") ?
           photoElement.getAttribute("src") :
           null;
 
       const descriptionElement = document.querySelector(
-        ".pv-about__summary-text .lt-line-clamp__raw-line"
+        ".artdeco-card .pv-shared-text-with-see-more"
       ); // Is outside "profileSection"
       const description =
         descriptionElement && descriptionElement.textContent ?
           await window.getCleanText(descriptionElement.textContent) :
           null;
-
-
-      console.log(fullName,
-        title,
-        location,
-        photo,
-        description,
-        url)
 
       return {
         fullName,
@@ -172,242 +146,413 @@ const getData = async (page, url) => {
         url,
       };
     });
-    // const userProfile = await page.evaluate(async () => {
+
+    /**
+     * Retorno da lista de experiências profissionais, acadêmicas, competências
+     */
+
+    const { allExperiences, allEducations, allSkills, urlExperiences, urlEducations, urlSkills } = await page.$$eval(
+      "main > section",
+      async (nodes) => {
+
+        const flowExperience = {
+          openPageForMoreItems: ".pvs-list__outer-container .pvs-list__footer-wrapper a",
+          getInternalListCards: ".pvs-entity > div > .pvs-list__outer-container > .pvs-list > li > .pvs-entity",
+          getListCards: ".pvs-list__outer-container > .pvs-list > .artdeco-list__item",
+          items: {
+            title: ".pvs-list .pvs-entity div div div .t-bold span:nth-child(1)",
+            listDetails: ".pvs-list .pvs-entity div div .t-normal",
+            itemDetail: ".t-normal span:first-child",
+            description: ".pvs-list .pvs-entity div .pvs-list__outer-container .pvs-list .pvs-list__item--with-top-padding span:first-child "
+          }
+        }
+
+        let experienceArray = [];
+        let educationArray = [];
+        let skillsArray = [];
 
 
-    console.log('tres', url);
+        /**
+        * Candidato com muitas experiências
+        */
+        let urlExperiences = null;
 
-    // const profileSection = document.querySelector(".pv-top-card");
+        /**
+        * Candidato com muitas experiências acadêmicas
+        */
+        let urlEducations = null;
 
-    // console.log('tres', profileSection);
+        /**
+        * Candidato com muitas experiências acadêmicas
+        */
+         let urlSkills = null;
 
-    // const url = window.location.href;
+        for (const node of nodes) {
 
-    // const fullNameElement = profileSection.querySelector(
-    //   ".pv-top-card--list li:first-child"
-    // );
-    // const fullName =
-    //   fullNameElement && fullNameElement.textContent ?
-    //     await window.getCleanText(fullNameElement.textContent) :
-    //     null;
+          const experiences = node.querySelector("#experience")
 
-    // const titleElement = profileSection.querySelector("h2");
-    // const title =
-    //   titleElement && titleElement.textContent ?
-    //     await window.getCleanText(titleElement.textContent) :
-    //     null;
+          if (experiences) {
 
-    // const locationElement = profileSection.querySelector(
-    //   ".pv-top-card--list.pv-top-card--list-bullet.mt1 li:first-child"
-    // );
-    // const locationText =
-    //   locationElement && locationElement.textContent ?
-    //     await window.getCleanText(locationElement.textContent) :
-    //     null;
-    // const location = await getLocationFromText(locationText);
+            /**
+            * Possui um link para todas as experiências?
+            */
+            const allJobs = await node.querySelector(flowExperience.openPageForMoreItems);
 
-    // const photoElement =
-    //   profileSection.querySelector(".pv-top-card__photo") ||
-    //   profileSection.querySelector(".profile-photo-edit__preview");
-    // const photo =
-    //   photoElement && photoElement.getAttribute("src") ?
-    //     photoElement.getAttribute("src") :
-    //     null;
+            if (!allJobs) {
 
-    // const descriptionElement = document.querySelector(
-    //   ".pv-about__summary-text .lt-line-clamp__raw-line"
-    // ); // Is outside "profileSection"
-    // const description =
-    //   descriptionElement && descriptionElement.textContent ?
-    //     await window.getCleanText(descriptionElement.textContent) :
-    //     null;
+              const jobs = await Array.from(node.querySelectorAll(flowExperience.getListCards))
 
-    // return null
+              for (const job of jobs) {
 
-    // return {
-    //   fullName,
-    //   title,
-    //   location,
-    //   photo,
-    //   description,
-    //   url,
-    // };
-    // });
+                const titleTopAux = job.querySelector(flowExperience.items.title);
+                const titleTop = titleTopAux && titleTopAux.textContent ?
+                  await window.getCleanText(titleTopAux.textContent) :
+                  null;
+                
+                /**
+                * Verificando se existe uma lista interna de experiências
+                */
+                const internalList = await Array.from(job.querySelectorAll(flowExperience.getInternalListCards));
 
-    // const experiences = await page.$$eval(
-    //   "#experience-section ul > .ember-view",
-    //   async (nodes) => {
-    //     let data = [];
+                if (internalList && internalList.length > 0) {
+                  for (const itemInternal of internalList) {
+                    let arrayDetails = [];
+                    const titleJob = itemInternal.querySelector(flowExperience.items.title);
+                    const title = titleJob && titleJob.textContent ?
+                      await window.getCleanText(titleJob.textContent) :
+                      null;
 
-    //     // Using a for loop so we can use await inside of it
-    //     for (const node of nodes) {
-    //       const titleElement = node.querySelector("h3");
-    //       const title =
-    //         titleElement && titleElement.textContent ?
-    //           await window.getCleanText(titleElement.textContent) :
-    //           null;
+                    if (title) {
 
-    //       const companyElement = node.querySelector(
-    //         ".pv-entity__secondary-title"
-    //       );
-    //       const company =
-    //         companyElement && companyElement.textContent ?
-    //           await window.getCleanText(companyElement.textContent) :
-    //           null;
+                      for (let i = 2; i <= 4; i++) {
+                        const item = itemInternal.querySelector(`${flowExperience.items.listDetails}:nth-child(${i})`) || null;
+                        const itemSelected = item && item.querySelector(flowExperience.items.itemDetail) || null;
+                        const itemText = itemSelected && itemSelected.textContent ?
+                          await window.getCleanText(itemSelected.textContent) :
+                          null;
+                        if (itemText) {
+                          arrayDetails.push(itemText);
+                        }
+                      }
+      
+                      const details = await returnDetailsByExperience('experience', arrayDetails);
+      
+                      const descriptionSpan = itemInternal.querySelector(flowExperience.items.description) || null;
+                      const description = descriptionSpan && descriptionSpan.textContent ?
+                        await window.getCleanText(descriptionSpan.textContent) :
+                        null;
 
-    //       const descriptionElement = node.querySelector(
-    //         ".pv-entity__description"
-    //       );
-    //       const description =
-    //         descriptionElement && descriptionElement.textContent ?
-    //           await window.getCleanText(descriptionElement.textContent) :
-    //           null;
+                      const { company, ...remaining } = details;
+                      experienceArray.push({ company: titleTop, title, description: description || '' , ...remaining });
+                    }
+                  }
+                } else {
+                  /**
+                  * Se não possui uma lista interna, pego as experiências normalmente
+                  */
+                  const titleJob = job.querySelector(flowExperience.items.title);
+                  const title = titleJob && titleJob.textContent ?
+                    await window.getCleanText(titleJob.textContent) :
+                    null;
 
-    //       const dateRangeElement = node.querySelector(
-    //         ".pv-entity__date-range span:nth-child(2)"
-    //       );
-    //       const dateRangeText =
-    //         dateRangeElement && dateRangeElement.textContent ?
-    //           await window.getCleanText(dateRangeElement.textContent) :
-    //           null;
+                  let arrayDetails = [];
 
-    //       const startDatePart = dateRangeText ?
-    //         await window.getCleanText(dateRangeText.split("–")[0]) :
-    //         null;
-    //       const startDate = startDatePart ? startDatePart : null;
+                  if (title) {
 
-    //       const endDatePart = dateRangeText ?
-    //         await window.getCleanText(dateRangeText.split("–")[1]) :
-    //         null;
-    //       const endDateIsPresent = endDatePart ?
-    //         endDatePart.trim().toLowerCase() === "o momento" :
-    //         false;
-    //       const endDate = endDatePart && !endDateIsPresent ? endDatePart : null;
+                    for (let i = 2; i <= 4; i++) {
+                      const item = job.querySelector(`${flowExperience.items.listDetails}:nth-child(${i})`) || null;
+                      const itemSelected = item && item.querySelector(flowExperience.items.itemDetail) || null;
+                      const itemText = itemSelected && itemSelected.textContent ?
+                        await window.getCleanText(itemSelected.textContent) :
+                        null;
+                      if (itemText) {
+                        arrayDetails.push(itemText);
+                      }
+                    }
+    
+                    const details = await returnDetailsByExperience('experience', arrayDetails);
+    
+                    const descriptionSpan = job.querySelector(flowExperience.items.description) || null;
+                    const description = descriptionSpan && descriptionSpan.textContent ?
+                      await window.getCleanText(descriptionSpan.textContent) :
+                      null;
 
-    //       const durationInDaysWithEndDate =
-    //         startDate && endDate && !endDateIsPresent ?
-    //           await getDurationInDays(startDate, endDate) :
-    //           null;
-    //       const durationInDaysForPresentDate = endDateIsPresent ?
-    //         await getDurationInDays(startDate, new Date()) :
-    //         null;
-    //       const durationInDays = endDateIsPresent ?
-    //         durationInDaysForPresentDate :
-    //         durationInDaysWithEndDate;
+                    if(details){
+                      experienceArray.push({ title, ...details, description: description || ''});
+                    }
+                  }
+                }
+              }
+            } else {
+            /**
+            * Guardando o link com todas as experiências
+            */
+              urlExperiences = allJobs && allJobs.getAttribute("href") ? allJobs.getAttribute("href") : null;
+            }
 
-    //       const locationElement = node.querySelector(
-    //         ".pv-entity__location span:nth-child(2)"
-    //       );
-    //       const locationText =
-    //         locationElement && locationElement.textContent ?
-    //           await window.getCleanText(locationElement.textContent) :
-    //           null;
-    //       const location = await getLocationFromText(locationText);
+          }
 
-    //       data.push({
-    //         title,
-    //         company,
-    //         location,
-    //         startDate,
-    //         endDate,
-    //         endDateIsPresent,
-    //         durationInDays,
-    //         description,
-    //       });
-    //     }
+          const education = node.querySelector("#education")
+          if (education) {
 
-    //     return data;
-    //   }
-    // );
+            const allEducation = await node.querySelector(flowExperience.openPageForMoreItems);
 
-    // const education = await page.$$eval(
-    //   "#education-section ul > .ember-view",
-    //   async (nodes) => {
-    //     // Note: the $$eval context is the browser context.
-    //     // So custom methods you define in this file are not available within this $$eval.
-    //     let data = [];
-    //     for (const node of nodes) {
-    //       const schoolNameElement = node.querySelector(
-    //         "h3.pv-entity__school-name"
-    //       );
-    //       const schoolName =
-    //         schoolNameElement && schoolNameElement.textContent ?
-    //           await window.getCleanText(schoolNameElement.textContent) :
-    //           null;
+            if (!allEducation) {
 
-    //       const degreeNameElement = node.querySelector(
-    //         ".pv-entity__degree-name .pv-entity__comma-item"
-    //       );
-    //       const degreeName =
-    //         degreeNameElement && degreeNameElement.textContent ?
-    //           await window.getCleanText(degreeNameElement.textContent) :
-    //           null;
+              const institutions = await Array.from(node.querySelectorAll(flowExperience.getListCards));
 
-    //       const fieldOfStudyElement = node.querySelector(
-    //         ".pv-entity__fos .pv-entity__comma-item"
-    //       );
-    //       const fieldOfStudy =
-    //         fieldOfStudyElement && fieldOfStudyElement.textContent ?
-    //           await window.getCleanText(fieldOfStudyElement.textContent) :
-    //           null;
+              for (const institution of institutions) {
+                let arrayDetails = [];
+                const titleInstitution = institution.querySelector(flowExperience.items.title);
+                const title = titleInstitution && titleInstitution.textContent ?
+                  await window.getCleanText(titleInstitution.textContent) :
+                  null;
+                if (title) {
 
-    //       const gradeElement = node.querySelector(
-    //         ".pv-entity__grade .pv-entity__comma-item"
-    //       );
-    //       const grade =
-    //         gradeElement && gradeElement.textContent ?
-    //           await window.getCleanText(fieldOfStudyElement.textContent) :
-    //           null;
+                  for (let i = 2; i <= 4; i++) {
+                    const item = institution.querySelector(`${flowExperience.items.listDetails}:nth-child(${i})`) || null;
+                    const itemSelected = item && item.querySelector(flowExperience.items.itemDetail) || null;
+                    const itemText = itemSelected && itemSelected.textContent ?
+                      await window.getCleanText(itemSelected.textContent) :
+                      null;
+                    if (itemText) {
+                      arrayDetails.push(itemText);
+                    }
+                  }
+  
+                  const details = await returnDetailsByExperience('education', arrayDetails);
+  
+                  const descriptionSpan = institution.querySelector(flowExperience.items.description) || null;
+                  const description = descriptionSpan && descriptionSpan.textContent ?
+                    await window.getCleanText(descriptionSpan.textContent) :
+                    null;
 
-    //       const dateRangeElement = node.querySelectorAll(
-    //         ".pv-entity__dates time"
-    //       );
+                  if(details){
+                    educationArray.push({ schoolName: title, ...details, fieldOfStudy: description || ''});
+                  }
+                }
+              }
+            } else {
+              urlEducations = allEducation && allEducation.getAttribute("href") ? allEducation.getAttribute("href") : null;
+            }
+          }
 
-    //       const startDatePart =
-    //         dateRangeElement &&
-    //           dateRangeElement[0] &&
-    //           dateRangeElement[0].textContent ?
-    //           await window.getCleanText(dateRangeElement[0].textContent) :
-    //           null;
-    //       const startDate = startDatePart ?
-    //         await formatDate(startDatePart) :
-    //         null;
 
-    //       const endDatePart =
-    //         dateRangeElement &&
-    //           dateRangeElement[1] &&
-    //           dateRangeElement[1].textContent ?
-    //           await window.getCleanText(dateRangeElement[1].textContent) :
-    //           null;
-    //       const endDate = endDatePart ? await formatDate(endDatePart) : null;
+          const skills = node.querySelector("#skills")
+          if (skills) {
+        
+            const flowSkills = {
+              getListCards: ".pvs-list__outer-container .pvs-list li .pvs-entity",
+              title: ".pvs-entity div div div .t-bold span:nth-child(1)"
+            }
 
-    //       // const durationInDays = (startDate && endDate) ? await getDurationInDays(startDate, endDate) : null
+            const allSkills = await node.querySelector(flowExperience.openPageForMoreItems);
 
-    //       data.push({
-    //         schoolName,
-    //         degreeName,
-    //         fieldOfStudy,
-    //         startDate,
-    //         endDate,
-    //         // durationInDays
-    //       });
-    //     }
+            if (!allSkills) {
 
-    //     return data;
-    //   }
-    // );
+              const listSkills = await Array.from(node.querySelectorAll(flowSkills.getListCards));
+
+              for (const skill of listSkills) {
+                
+                const titleskill = skill.querySelector(flowSkills.title);
+                const title = titleskill && titleskill.textContent ?
+                  await window.getCleanText(titleskill.textContent) :
+                  null;
+                if (title) {
+                  skillsArray.push(title);
+                }
+              }
+            } else {
+              urlSkills = allSkills && allSkills.getAttribute("href") ? allSkills.getAttribute("href") : null;
+            }
+          }
+
+          
+        }
+
+        return { allExperiences: experienceArray, allEducations: educationArray, allSkills: skillsArray, urlExperiences, urlEducations, urlSkills };
+      }
+    )
 
     return {
-      // userProfile,
-      //experiences,
-      //education,
+      userProfile,
+      experiences: allExperiences,
+      education: allEducations,
+      skills: allSkills,
+      urlExperiences,
+      urlEducations,
+      urlSkills
     };
   } catch (error) {
     throw new Error(error);
   }
 };
 
+const getAllExperiences = async (type , page, url) => {
+  await page.goto(url);
+  await page.waitForTimeout(1000);
+
+  page.on('console', (msg) => console.log('PAGE LOG:', msg.text()));
+
+  try {
+    return await page.$$eval(
+      "main > section",
+      async (nodes, type) => {
+
+        const flowExperience = {
+          getListCards: ".pvs-list__container .scaffold-finite-scroll__content > .pvs-list > .pvs-list__item--line-separated",
+          getInternalListCards: "li .pvs-entity div .pvs-list__outer-container .pvs-list li .pvs-list__container .scaffold-finite-scroll .scaffold-finite-scroll__content > .pvs-list > li",
+          items: {
+            title: "li .pvs-entity div div div .t-bold span:nth-child(1)",
+            listDetails: ".pvs-list .pvs-entity div div .t-normal",
+            itemDetail: ".t-normal span:first-child",
+            description: ".pvs-list .pvs-entity div .pvs-list__outer-container .pvs-list .pvs-list__item--with-top-padding span:first-child "
+          }
+        }
+
+        let allExpandedExperiences = [];
+        for (const node of nodes) {
+
+          const jobs = await Array.from(node.querySelectorAll(flowExperience.getListCards))
+
+          for (const job of jobs) {
+
+            const titleTopAux = job.querySelector(flowExperience.items.title);
+            const titleTop = titleTopAux && titleTopAux.textContent ?
+              await window.getCleanText(titleTopAux.textContent) :
+              null;
+
+            const internalList = await Array.from(job.querySelectorAll(flowExperience.getInternalListCards));
+
+            if (internalList && internalList.length > 0) {
+              for (const itemInternal of internalList) {
+                let arrayDetails = [];
+                const titleJob = itemInternal.querySelector(flowExperience.items.title);
+                const title = titleJob && titleJob.textContent ?
+                  await window.getCleanText(titleJob.textContent) :
+                  null;
+
+                if (title) {
+
+                  for (let i = 2; i <= 4; i++) {
+                    const item = itemInternal.querySelector(`${flowExperience.items.listDetails}:nth-child(${i})`) || null;
+                    const itemSelected = item && item.querySelector(flowExperience.items.itemDetail) || null;
+                    const itemText = itemSelected && itemSelected.textContent ?
+                      await window.getCleanText(itemSelected.textContent) :
+                      null;
+                    if (itemText) {
+                      arrayDetails.push(itemText);
+                    }
+                  }
+
+                  const details = await returnDetailsByExperience(type, arrayDetails);
+
+                  const descriptionSpan = itemInternal.querySelector(flowExperience.items.description) || null;
+                  const description = descriptionSpan && descriptionSpan.textContent ?
+                    await window.getCleanText(descriptionSpan.textContent) :
+                    null;
+
+                    if(type === 'experience' && details){
+                      const { company, ...remaining } = details;
+                      allExpandedExperiences.push({ company: titleTop, title, description: description || '', ...remaining });
+                    }else{
+                      if(type === 'education'&& details){
+                        allExpandedExperiences.push({ schoolName: title, ...details, fieldOfStudy: description || ''});
+                      }
+                    }
+                }
+              }
+
+            } else {
+              let arrayDetails = [];
+              const titleJob = job.querySelector(flowExperience.items.title);
+              const title = titleJob && titleJob.textContent ?
+                await window.getCleanText(titleJob.textContent) :
+                null;
+
+              if (title) {
+
+                for (let i = 2; i <= 4; i++) {
+                  const item = job.querySelector(`${flowExperience.items.listDetails}:nth-child(${i})`) || null;
+                  const itemSelected = item && item.querySelector(flowExperience.items.itemDetail) || null;
+                  const itemText = itemSelected && itemSelected.textContent ?
+                    await window.getCleanText(itemSelected.textContent) :
+                    null;
+                  if (itemText) {
+                    arrayDetails.push(itemText);
+                  }
+                }
+
+                const details = await returnDetailsByExperience(type, arrayDetails);
+
+                const descriptionSpan = job.querySelector(flowExperience.items.description) || null;
+                const description = descriptionSpan && descriptionSpan.textContent ?
+                  await window.getCleanText(descriptionSpan.textContent) :
+                  null;
+
+                if(type === 'experience' && details){
+                  allExpandedExperiences.push({ title, ...details, description: description || '' });
+                }else{
+                  if(type === 'education' && details){
+                    allExpandedExperiences.push({ schoolName: title, ...details, fieldOfStudy: description || ''});
+                  }
+                }
+              }
+            }
+          }
+
+
+        }
+
+        return allExpandedExperiences;
+      }, 
+      type
+    )
+
+  } catch (error) {
+    throw new Error(error);
+  }
+}
+
+const getAllSkills = async (page, url)=>{
+  await page.goto(url);
+  page.on('console', (msg) => console.log('PAGE LOG:', msg.text()));
+  
+  try {
+    return await page.$$eval(
+      "main > section",
+      async (nodes) => {
+
+        let arraySkills = [];
+        
+        const flowSkills = {
+          getListCards: ".artdeco-tabpanel .pvs-list__container div div .pvs-list > .pvs-list__paged-list-item",
+          title: ".pvs-list__paged-list-item .pvs-entity div div a .t-bold span:nth-child(1)"
+          
+        }
+        for(node of nodes){
+
+          const listSkills = await Array.from(node.querySelectorAll(flowSkills.getListCards));
+          for (const skill of listSkills) {
+            const titleskill = skill.querySelector(flowSkills.title);
+            const title = titleskill && titleskill.textContent ?
+              await window.getCleanText(titleskill.textContent) :
+              null;
+            if (title) {
+              arraySkills.push(title);
+            }
+          }
+        }
+        return arraySkills;
+      })
+  } catch (error) {
+    throw new Error(error);
+  }
+}
+
 module.exports = {
   setup,
   getData,
+  getAllExperiences,
+  getAllSkills
 };
